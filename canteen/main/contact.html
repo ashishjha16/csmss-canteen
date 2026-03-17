@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="logo.png" />
+    <title>CSMSS Canteen | Contact</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#12422e",
+              accent: "#3f3f46",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="min-h-screen bg-[#12422e] text-white flex flex-col"
+    data-page="contact"
+  >
+    <!-- Navbar -->
+    <header
+      class="sticky top-0 z-50 border-b border-[#0f5a3b] bg-[#12422e]/95 backdrop-blur"
+    >
+      <nav
+        class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6 lg:px-8"
+      >
+        <a href="index.html" class="flex items-center gap-3">
+          <div class="logo-container mr-3 flex items-center">
+            <img
+              src="logo.png"
+              alt="CanteenCo Logo"
+              class="logo h-9 w-auto md:h-12"
+            />
+          </div>
+          <div class="flex flex-col leading-tight text-white">
+            <span class="font-semibold tracking-tight">CSMSS Canteen</span>
+            <span class="text-xs text-white/70 hidden sm:inline">
+              Fresh • Hygienic • Affordable
+            </span>
+          </div>
+        </a>
+
+        <div class="hidden items-center gap-6 text-sm md:flex text-white">
+          <a href="index.html" class="text-white/80 hover:text-white">Home</a>
+          <a href="menu.html" class="text-white/80 hover:text-white">Menu</a>
+          <a href="order.html" class="text-white/80 hover:text-white"
+            >Order</a
+          >
+          <a href="gallery.html" class="text-white/80 hover:text-white"
+            >Gallery</a
+          >
+          <a href="contact.html" class="font-medium text-white">Contact</a>
+          <a
+            href="cart.html"
+            class="inline-flex items-center gap-2 rounded-full border border-transparent bg-[#1f6f4a] px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#0f5a3b]"
+          >
+            <span>Cart</span>
+            <span
+              id="nav-cart-count"
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
+              >0</span
+            >
+          </a>
+        </div>
+
+        <!-- Mobile menu button -->
+        <button
+          id="mobile-menu-toggle"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:border-primary hover:text-primary md:hidden"
+          aria-label="Toggle navigation"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </nav>
+
+      <!-- Mobile menu -->
+      <div
+        id="mobile-menu"
+        class="hidden border-t border-[#0f5a3b] bg-[#12422e] md:hidden"
+      >
+        <div class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 text-sm text-white">
+          <a
+            href="index.html"
+            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
+            >Home</a
+          >
+          <a
+            href="menu.html"
+            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
+            >Menu</a
+          >
+          <a
+            href="order.html"
+            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
+            >Order</a
+          >
+          <a
+            href="gallery.html"
+            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
+            >Gallery</a
+          >
+          <a href="contact.html" class="rounded-md bg-white/10 px-3 py-2 text-white"
+            >Contact</a
+          >
+          <a
+            href="cart.html"
+            class="mt-1 inline-flex items-center justify-between rounded-md border border-transparent bg-[#1f6f4a] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#0f5a3b]"
+          >
+            <span>Cart</span>
+            <span
+              id="mobile-cart-count"
+              class="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
+              >0</span
+            >
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <section class="border-b border-[#0f5a3b] bg-[#12422e]">
+        <div
+          class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 text-white md:flex-row md:items-end md:justify-between md:py-12 lg:px-8"
+        >
+          <div class="space-y-2">
+            <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Contact &amp; Location
+            </h1>
+            <p class="text-sm text-zinc-300">
+              Reach the CSMSS Canteen team or locate us on campus.
+            </p>
+          </div>
+          <p class="text-xs text-zinc-300">
+            For any feedback, suggestions or special arrangements, connect with
+            us using the details below.
+          </p>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-6xl px-4 py-10 md:py-12 lg:px-8">
+        <div class="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
+          <!-- Contact info -->
+          <div class="space-y-5">
+            <div class="space-y-1.5">
+              <h2 class="text-lg font-semibold tracking-tight text-white">
+                Canteen Details
+              </h2>
+              <p class="text-sm text-white/80">
+                CSMSS Chh. Shahu College of Engineering
+              </p>
+              <p class="text-xs text-white/70">
+                Kanchanwadi, Paithan Road, Aurangabad, Maharashtra, India.
+              </p>
+            </div>
+
+            <div class="space-y-3 text-sm text-white/80">
+              <div>
+                <p class="text-xs font-medium text-zinc-500">Phone</p>
+                <p class="mt-0.5">+91-XXXXXXXXXX</p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-zinc-500">Email</p>
+                <p class="mt-0.5">canteen@csmsscoe.edu.in</p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-zinc-500">Canteen Timings</p>
+                <p class="mt-0.5">Monday – Saturday: 8:00 am – 6:30 pm</p>
+              </div>
+            </div>
+
+            <div
+              class="space-y-2 rounded-2xl border border-dashed border-primary/30 bg-emerald-950/30 p-4 text-xs text-white/80"
+            >
+              <p class="font-medium text-primary">Feedback &amp; Suggestions</p>
+              <p>
+                Students are encouraged to share their feedback on food quality,
+                hygiene and service. This helps us continuously improve the
+                canteen experience.
+              </p>
+            </div>
+
+            <!-- Social links -->
+            <div class="space-y-2 text-xs text-white/80">
+              <p class="font-medium text-white">Social Links</p>
+              <div class="flex flex-wrap gap-3">
+                <a
+                  href="#"
+                  class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                >
+                  <span>Instagram</span>
+                </a>
+                <a
+                  href="#"
+                  class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                >
+                  <span>Facebook</span>
+                </a>
+                <a
+                  href="#"
+                  class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                >
+                  <span>College Website</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Map -->
+          <div
+            class="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100"
+          >
+            <iframe
+              title="CSMSS Chh. Shahu College of Engineering Location"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3768.697061117368!2d75.373!3d19.161!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bdb9959c4b3b0d7%3A0xeadf4d8c1a0fd430!2sCSMSS%20Chh.%20Shahu%20College%20of%20Engineering!5e0!3m2!1sen!2sin!4v1700000000000"
+              width="100%"
+              height="360"
+              style="border: 0"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-200 bg-white">
+      <div
+        class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between lg:px-8"
+      >
+        <div>
+          <p class="font-medium text-accent">CSMSS Canteen</p>
+          <p class="mt-1">
+            CSMSS Chh. Shahu College of Engineering, Kanchanwadi, Paithan Road,
+            Aurangabad.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-3">
+            <a
+              href="#"
+              class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-primary hover:text-primary"
+              aria-label="Instagram"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="4"
+                  ry="4"
+                ></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.5" y2="6.5"></line>
+              </svg>
+            </a>
+            <a
+              href="#"
+              class="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-primary hover:text-primary"
+              aria-label="Facebook"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M13 10.5V7.75C13 6.784 13.784 6 14.75 6H16V3H14.5C11.738 3 9.5 5.238 9.5 8V10.5H7V14H9.5V21H13V14H15.5L16 10.5H13Z"
+                />
+              </svg>
+            </a>
+          </div>
+          <p class="text-[11px]">
+            &copy; <span id="year"></span> CSMSS Canteen. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>
+
