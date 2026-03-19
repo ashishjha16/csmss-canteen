@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="logo.png" />
-    <title>CSMSS Canteen | Order</title>
+    <title>CSMSS Canteen | Contact</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -21,7 +21,7 @@
   </head>
   <body
     class="min-h-screen bg-[#12422e] text-white flex flex-col"
-    data-page="order"
+    data-page="contact"
   >
     <!-- Navbar -->
     <header
@@ -46,7 +46,28 @@
           </div>
         </a>
 
-        <!-- This legacy page is no longer linked in navigation; kept only as a fallback. -->
+        <div class="hidden items-center gap-6 text-sm md:flex text-white">
+          <a href="index.html" class="text-white/80 hover:text-white">Home</a>
+          <a href="menu.html" class="text-white/80 hover:text-white">Menu</a>
+          <a href="order.html" class="text-white/80 hover:text-white"
+            >Order</a
+          >
+          <a href="gallery.html" class="text-white/80 hover:text-white"
+            >Gallery</a
+          >
+          <a href="contact.html" class="font-medium text-white">Contact</a>
+          <a
+            href="cart.html"
+            class="inline-flex items-center gap-2 rounded-full border border-transparent bg-[#1f6f4a] px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#0f5a3b]"
+          >
+            <span>Cart</span>
+            <span
+              id="nav-cart-count"
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
+              >0</span
+            >
+          </a>
+        </div>
 
         <!-- Mobile menu button -->
         <button
@@ -83,7 +104,9 @@
             class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
             >Menu</a
           >
-          <a href="order.html" class="rounded-md bg-white/10 px-3 py-2 text-white"
+          <a
+            href="order.html"
+            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
             >Order</a
           >
           <a
@@ -91,9 +114,7 @@
             class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
             >Gallery</a
           >
-          <a
-            href="contact.html"
-            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
+          <a href="contact.html" class="rounded-md bg-white/10 px-3 py-2 text-white"
             >Contact</a
           >
           <a
@@ -118,140 +139,102 @@
         >
           <div class="space-y-2">
             <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Place Your Order
+              Contact &amp; Location
             </h1>
             <p class="text-sm text-zinc-300">
-              Quickly pre-book your food and pick it up from the canteen
-              counter.
+              Reach the CSMSS Canteen team or locate us on campus.
             </p>
           </div>
-          <div class="text-xs text-zinc-300">
-            <p>Available during canteen working hours.</p>
-            <p class="mt-1">
-              Online form for demo only – no payment integration.
-            </p>
-          </div>
+          <p class="text-xs text-zinc-300">
+            For any feedback, suggestions or special arrangements, connect with
+            us using the details below.
+          </p>
         </div>
       </section>
 
-      <section class="mx-auto max-w-3xl px-4 py-10 md:py-12 lg:px-0">
-        <form
-          id="order-form"
-          class="space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-        >
-          <div class="grid gap-4 md:grid-cols-2 text-accent">
+      <section class="mx-auto max-w-6xl px-4 py-10 md:py-12 lg:px-8">
+        <div class="grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
+          <!-- Contact info -->
+          <div class="space-y-5">
             <div class="space-y-1.5">
-              <label
-                for="student-name"
-                class="text-xs font-medium text-zinc-700"
-                >Student Name</label
-              >
-              <input
-                id="student-name"
-                type="text"
-                required
-                placeholder="Enter your full name"
-                class="w-full rounded-lg border border-zinc-200 bg-[#f5f5f5] px-3 py-2 text-sm text-accent outline-none ring-primary/0 transition focus:bg-white focus:ring-2"
-              />
+              <h2 class="text-lg font-semibold tracking-tight text-white">
+                Canteen Details
+              </h2>
+              <p class="text-sm text-white/80">
+                CSMSS Chh. Shahu College of Engineering
+              </p>
+              <p class="text-xs text-white/70">
+                Kanchanwadi, Paithan Road, Aurangabad, Maharashtra, India.
+              </p>
             </div>
-            <div class="space-y-1.5">
-              <label
-                for="roll-number"
-                class="text-xs font-medium text-zinc-700"
-                >Roll Number</label
-              >
-              <input
-                id="roll-number"
-                type="text"
-                required
-                placeholder="CSMSS-XXXX"
-                class="w-full rounded-lg border border-zinc-200 bg-[#f5f5f5] px-3 py-2 text-sm text-accent outline-none ring-primary/0 transition focus:bg-white focus:ring-2"
-              />
-            </div>
-          </div>
 
-          <div class="space-y-1.5 text-accent">
-            <label for="food-item" class="text-xs font-medium text-zinc-700"
-              >Food Item</label
+            <div class="space-y-3 text-sm text-white/80">
+              <div>
+                <p class="text-xs font-medium text-zinc-500">Phone</p>
+                <p class="mt-0.5">+91-XXXXXXXXXX</p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-zinc-500">Email</p>
+                <p class="mt-0.5">canteen@csmsscoe.edu.in</p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-zinc-500">Canteen Timings</p>
+                <p class="mt-0.5">Monday – Saturday: 8:00 am – 6:30 pm</p>
+              </div>
+            </div>
+
+            <div
+              class="space-y-2 rounded-2xl border border-dashed border-primary/30 bg-emerald-950/30 p-4 text-xs text-white/80"
             >
-            <input
-              id="food-item"
-              type="text"
-              required
-              list="food-suggestions"
-              placeholder="e.g. Veg Thali, Masala Dosa, Cold Coffee"
-              class="w-full rounded-lg border border-zinc-200 bg-[#f5f5f5] px-3 py-2 text-sm text-accent outline-none ring-primary/0 transition focus:bg-white focus:ring-2"
-            />
-            <datalist id="food-suggestions"></datalist>
-            <p class="text-[11px] text-zinc-500">
-              Start typing to see popular items from the menu.
-            </p>
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] text-accent">
-            <div class="space-y-1.5">
-              <label for="quantity" class="text-xs font-medium text-zinc-700"
-                >Quantity</label
-              >
-              <input
-                id="quantity"
-                type="number"
-                min="1"
-                max="10"
-                step="1"
-                required
-                value="1"
-                class="w-full rounded-lg border border-zinc-200 bg-[#f5f5f5] px-3 py-2 text-sm text-accent outline-none ring-primary/0 transition focus:bg-white focus:ring-2"
-              />
+              <p class="font-medium text-primary">Feedback &amp; Suggestions</p>
+              <p>
+                Students are encouraged to share their feedback on food quality,
+                hygiene and service. This helps us continuously improve the
+                canteen experience.
+              </p>
             </div>
-            <div class="space-y-1.5">
-              <label for="pickup-time" class="text-xs font-medium text-zinc-700"
-                >Pickup Time</label
-              >
-              <input
-                id="pickup-time"
-                type="time"
-                required
-                class="w-full rounded-lg border border-zinc-200 bg-[#f5f5f5] px-3 py-2 text-sm text-accent outline-none ring-primary/0 transition focus:bg-white focus:ring-2"
-              />
+
+            <!-- Social links -->
+            <div class="space-y-2 text-xs text-white/80">
+              <p class="font-medium text-white">Social Links</p>
+              <div class="flex flex-wrap gap-3">
+                <a
+                  href="#"
+                  class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                >
+                  <span>Instagram</span>
+                </a>
+                <a
+                  href="#"
+                  class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                >
+                  <span>Facebook</span>
+                </a>
+                <a
+                  href="#"
+                  class="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-primary hover:text-primary"
+                >
+                  <span>College Website</span>
+                </a>
+              </div>
             </div>
           </div>
 
-          <div class="space-y-1.5 text-accent">
-            <label for="notes" class="text-xs font-medium text-zinc-700"
-              >Additional Notes (Optional)</label
-            >
-            <textarea
-              id="notes"
-              rows="3"
-              placeholder="Any special instructions or preferences"
-              class="w-full rounded-lg border border-zinc-200 bg-[#f5f5f5] px-3 py-2 text-sm text-accent outline-none ring-primary/0 transition focus:bg-white focus:ring-2"
-            ></textarea>
-          </div>
-
+          <!-- Map -->
           <div
-            class="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-zinc-200 pt-4 text-accent"
+            class="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100"
           >
-            <p class="text-[11px] text-zinc-500">
-              This is a demo ordering form. Orders are not actually sent to the
-              canteen.
-            </p>
-            <button
-              type="submit"
-              class="inline-flex items-center justify-center rounded-full bg-[#1f6f4a] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#0f5a3b]"
-            >
-              Place Order
-            </button>
+            <iframe
+              title="CSMSS Chh. Shahu College of Engineering Location"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3768.697061117368!2d75.373!3d19.161!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bdb9959c4b3b0d7%3A0xeadf4d8c1a0fd430!2sCSMSS%20Chh.%20Shahu%20College%20of%20Engineering!5e0!3m2!1sen!2sin!4v1700000000000"
+              width="100%"
+              height="360"
+              style="border: 0"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
           </div>
-        </form>
-
-        <!-- Demo confirmation -->
-        <div
-          id="order-success"
-          class="mt-4 hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800"
-        >
-          Your order has been recorded locally for demo purposes. In a real
-          deployment, this would be sent to the canteen admin panel.
         </div>
       </section>
     </main>
@@ -318,7 +301,6 @@
         </div>
       </div>
     </footer>
-
     <script src="script.js" defer></script>
   </body>
 </html>

@@ -441,12 +441,11 @@ function initSignupModalGlobal() {
             </div>
 
             <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <p class="text-[11px] text-zinc-500">Saved to localStorage (demo).</p>
+              <p class="text-[11px] text-zinc-500">Fill details and submit.</p>
               <button
-                type="submit"
-                class="inline-flex items-center justify-center rounded-full bg-[#1f6f4a] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#0f5a3b]"
-              >
-                Submit
+              type="submit"
+              class="inline-flex items-center justify-center rounded-full bg-[#1f6f4a] px-6 py-2.5 text-sm font-medium text-white shadow-sm">
+              Submit
               </button>
             </div>
           </form>
@@ -569,87 +568,102 @@ function initSignupModalGlobal() {
     );
 
     setStudentVisibility(false);
-
     if (!form) return;
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      clearErrors(modal);
 
-      const fd = new FormData(form);
-      const fullName = String(fd.get("fullName") || "").trim();
-      const dob = String(fd.get("dob") || "").trim();
-      const phoneDigits = onlyDigits(fd.get("phone") || "");
-      const userType = getUserType();
 
-      let ok = true;
-      if (!fullName) {
-        ok = false;
-        setFieldError(modal, "fullName", "Full Name is required.");
-      }
-      if (!dob) {
-        ok = false;
-        setFieldError(modal, "dob", "Date of Birth is required.");
-      }
-      if (!phoneDigits) {
-        ok = false;
-        setFieldError(modal, "phone", "Phone number is required.");
-      } else if (phoneDigits.length !== 10) {
-        ok = false;
-        setFieldError(modal, "phone", "Phone number must be exactly 10 digits.");
-      }
-      if (!userType) {
-        ok = false;
-        setFieldError(modal, "userType", "Please select Staff or Student.");
-      }
+     form.addEventListener("submit", async (e) => {
+     e.preventDefault();
+     clearErrors(modal);
 
-      const isStudent = userType === "Student";
-      const branchVal = String(fd.get("branch") || "").trim();
-      const rollVal = String(fd.get("rollNumber") || "").trim();
-      const yearVal = String(fd.get("year") || "").trim();
+     const fd = new FormData(form);
+     const fullName = String(fd.get("fullName") || "").trim();
+     const dob = String(fd.get("dob") || "").trim();
+     const phoneDigits = onlyDigits(fd.get("phone") || "");
+     const userType = getUserType();
 
-      if (isStudent) {
-        if (!branchVal) {
-          ok = false;
-          setFieldError(modal, "branch", "Branch is required for Students.");
-        }
-        if (!rollVal) {
-          ok = false;
-          setFieldError(modal, "rollNumber", "Roll Number is required for Students.");
-        }
-        if (!yearVal) {
-          ok = false;
-          setFieldError(modal, "year", "Year is required for Students.");
-        }
-      }
+     let ok = true;
 
-      if (!ok) return;
+     if (!fullName) {
+       ok = false;
+      setFieldError(modal, "fullName", "Full Name is required.");
+  }
+  if (!dob) {
+    ok = false;
+    setFieldError(modal, "dob", "Date of Birth is required.");
+  }
+  if (!phoneDigits) {
+    ok = false;
+    setFieldError(modal, "phone", "Phone number is required.");
+  } else if (phoneDigits.length !== 10) {
+    ok = false;
+    setFieldError(modal, "phone", "Phone number must be exactly 10 digits.");
+  }
+  if (!userType) {
+    ok = false;
+    setFieldError(modal, "userType", "Please select Staff or Student.");
+  }
 
-      const payload = {
-        fullName,
-        dob,
-        phone: phoneDigits,
-        userType,
-        branch: isStudent ? branchVal : "",
-        rollNumber: isStudent ? rollVal : "",
-        year: isStudent ? yearVal : "",
-        createdAt: Date.now(),
-      };
+  const isStudent = userType === "Student";
+  const branchVal = String(fd.get("branch") || "").trim();
+  const rollVal = String(fd.get("rollNumber") || "").trim();
+  const yearVal = String(fd.get("year") || "").trim();
 
-      try {
-        const raw = localStorage.getItem(SIGNUP_STORAGE_KEY);
-        const list = raw ? JSON.parse(raw) : [];
-        const next = Array.isArray(list) ? list : [];
-        next.push(payload);
-        localStorage.setItem(SIGNUP_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
+  if (isStudent) {
+    if (!branchVal) {
+      ok = false;
+      setFieldError(modal, "branch", "Branch is required for Students.");
+    }
+    if (!rollVal) {
+      ok = false;
+      setFieldError(modal, "rollNumber", "Roll Number is required for Students.");
+    }
+    if (!yearVal) {
+      ok = false;
+      setFieldError(modal, "year", "Year is required for Students.");
+    }
+  }
 
-      showMiniToast("Sign up saved (demo)");
-      form.reset();
-      setStudentVisibility(false);
-      closeModal();
-    });
+  if (!ok) return;
+
+  const payload = {
+    fullName,
+    dob,
+    phone: phoneDigits,
+    userType,
+    branch: isStudent ? branchVal : "",
+    rollNumber: isStudent ? rollVal : "",
+    year: isStudent ? yearVal : "",
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+    const { getFirestore, collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
+      authDomain: "csmss-canteen-96d28.firebaseapp.com",
+      projectId: "csmss-canteen-96d28",
+      storageBucket: "csmss-canteen-96d28.firebasestorage.app",
+      messagingSenderId: "541374142906",
+      appId: "1:541374142906:web:8112606f02edbd6eada583",
+      measurementId: "G-JBD9TPTXET"
+    };
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    await addDoc(collection(db, "users"), payload);
+
+    showMiniToast("Sign up saved successfully");
+    form.reset();
+    setStudentVisibility(false);
+    closeModal();
+  } catch (error) {
+    console.error("Firebase save error:", error);
+    alert("Error: " + error.message);
+  }
+});
   }
 
   function bindOpenButtons() {
@@ -951,18 +965,50 @@ function initOrderPage() {
     });
   }
   if (form) {
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const formData = new FormData(form);
-      const order = Object.fromEntries(formData.entries());
-      localStorage.setItem(
-        "csmss_canteen_last_order",
-        JSON.stringify({ ...order, createdAt: Date.now() })
-      );
-      if (success) success.classList.remove("hidden");
-      showMiniToast("Order captured locally (demo)");
-      form.reset();
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const name = document.getElementById("fullName")?.value.trim() || "";
+  const phone = document.getElementById("phone")?.value.trim() || "";
+
+  if (!name || !phone) {
+    alert("Please fill all details");
+    return;
+  }
+
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+    const { getFirestore, collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
+    const firebaseConfig = {
+
+      apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
+      authDomain: "csmss-canteen-96d28.firebaseapp.com",
+      projectId: "csmss-canteen-96d28",
+      storageBucket: "csmss-canteen-96d28.firebasestorage.app",
+      messagingSenderId: "541374142906",
+      appId: "1:541374142906:web:8112606f02edbd6eada583",
+      measurementId: "G-JBD9TPTXET"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    await addDoc(collection(db, "users"), {
+      name,
+      phone,
+      createdAt: new Date().toISOString()
     });
+
+    alert("Data saved successfully ✅");
+
+    form.reset();
+
+  } catch (error) {
+    console.error(error);
+    alert("Error: " + error.message);
+  }
+});
   }
 }
 

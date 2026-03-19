@@ -19,6 +19,29 @@
       };
     </script>
   </head>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
+    authDomain: "csmss-canteen-96d28.firebaseapp.com",
+    projectId: "csmss-canteen-96d28",
+    storageBucket: "csmss-canteen-96d28.firebasestorage.app",
+    messagingSenderId: "541374142906",
+    appId: "1:541374142906:web:8112606f02edbd6eada583",
+    measurementId: "G-JBD9TPTXET"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
   <body class="min-h-screen bg-[#eaf3ff] text-zinc-900 flex flex-col" data-page="auth">
     <!-- Navbar -->
     <header class="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur">
@@ -274,12 +297,10 @@
                     </div>
 
                     <div class="pt-2">
-                      <button
-                        type="submit"
-                        class="w-full rounded-2xl bg-[#12422e] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-900 focus:outline-none focus:ring-4 focus:ring-[#cfe6ff]"
-                      >
-                        Submit
-                      </button>
+                      <button id="submitBtn" type="button" 
+                      class="w-full rounded-2xl bg-[#12422e] px-5 py-3 text-sm font-semibold text-white shadow-sm">
+                      Submit
+                     </button>
                       <p id="form-success" class="mt-3 text-xs text-emerald-700 hidden">
                         Saved locally (demo). You can now continue browsing.
                       </p>
