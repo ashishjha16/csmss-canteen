@@ -1,5 +1,8 @@
 // Shared configuration
 const CART_KEY = "csmss_canteen_cart";
+const USER_KEY = "csmss_user";
+const AUTH_PROFILE_KEY = "csmss_auth_profile";
+const USER_UPDATED_EVENT = "csmss-user-updated";
 
 function readCart() {
   try {
@@ -224,6 +227,119 @@ function setupMobileNav() {
 function initSignupModalGlobal() {
   const SIGNUP_STORAGE_KEY = "csmss_canteen_signup_profiles";
   const modalId = "signup-modal";
+  const DEFAULT_EMAIL = "";
+
+  function readUserProfile() {
+    try {
+      const raw = localStorage.getItem(USER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return {
+        name: String(parsed?.name || ""),
+        phone: String(parsed?.phone || ""),
+        email: String(parsed?.email || DEFAULT_EMAIL),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function getUserInitial(user) {
+    const name = String(user?.name || "").trim();
+    return name ? name.charAt(0).toUpperCase() : "";
+  }
+
+  function setProfileDropdownOpen(wrapper, isOpen) {
+    const dropdown = wrapper.querySelector('[data-profile-dropdown="true"]');
+    if (!dropdown) return;
+
+    if (isOpen) {
+      dropdown.classList.remove(
+        "opacity-0",
+        "scale-95",
+        "pointer-events-none"
+      );
+      dropdown.classList.add("opacity-100", "scale-100", "pointer-events-auto");
+      dropdown.setAttribute("aria-hidden", "false");
+      wrapper.setAttribute("data-profile-open", "true");
+    } else {
+      dropdown.classList.add(
+        "opacity-0",
+        "scale-95",
+        "pointer-events-none"
+      );
+      dropdown.classList.remove(
+        "opacity-100",
+        "scale-100",
+        "pointer-events-auto"
+      );
+      dropdown.setAttribute("aria-hidden", "true");
+      wrapper.setAttribute("data-profile-open", "false");
+    }
+  }
+
+  function closeAllProfileDropdowns(exceptWrapper) {
+    document
+      .querySelectorAll('[data-profile-wrapper="true"]')
+      .forEach((wrapper) => {
+        if (exceptWrapper && wrapper === exceptWrapper) return;
+        setProfileDropdownOpen(wrapper, false);
+      });
+  }
+
+  function bindProfileDropdownGlobal() {
+    if (bindProfileDropdownGlobal.bound) return;
+    bindProfileDropdownGlobal.bound = true;
+
+    document.addEventListener("click", (e) => {
+      const toggleBtn = e.target.closest('[data-action="toggle-profile"]');
+      if (toggleBtn) {
+        const wrapper = toggleBtn.closest('[data-profile-wrapper="true"]');
+        if (!wrapper) return;
+        e.preventDefault();
+        const isOpen = wrapper.getAttribute("data-profile-open") === "true";
+        closeAllProfileDropdowns(wrapper);
+        setProfileDropdownOpen(wrapper, !isOpen);
+        return;
+      }
+
+      if (!e.target.closest('[data-profile-wrapper="true"]')) {
+        closeAllProfileDropdowns();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAllProfileDropdowns();
+    });
+
+    document.addEventListener("click", (e) => {
+      const logoutBtn = e.target.closest('[data-action="logout"]');
+      if (!logoutBtn) return;
+      e.preventDefault();
+
+      try {
+        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(AUTH_PROFILE_KEY);
+      } catch {
+        // ignore
+      }
+      location.reload();
+    });
+  }
+
+  function updateProfileFields(wrapper) {
+    const user = readUserProfile();
+    if (!user) return;
+    const setText = (selector, value) => {
+      wrapper.querySelectorAll(selector).forEach((el) => {
+        el.textContent = value || "—";
+      });
+    };
+
+    setText('[data-profile-name="true"]', user.name);
+    setText('[data-profile-phone="true"]', user.phone);
+    setText('[data-profile-email="true"]', user.email);
+  }
 
   function onlyDigits(value) {
     return String(value || "").replace(/\D+/g, "");
@@ -243,21 +359,116 @@ function initSignupModalGlobal() {
       (el) => el?.classList?.contains("md:flex") && el?.classList?.contains("hidden")
     );
     if (!desktop) return;
-    if (desktop.querySelector('[data-action="open-signup"]')) return;
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.setAttribute("data-action", "open-signup");
-    btn.className = isDarkHeader()
-      ? "inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs font-medium text-zinc-100 backdrop-blur transition hover:bg-white/10"
-      : "inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-xs font-medium text-zinc-800 shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]";
-    btn.textContent = "Sign Up";
+    const user = readUserProfile();
+    if (!user) {
+      const existingProfile = desktop.querySelector('[data-profile-wrapper="true"]');
+      if (existingProfile) existingProfile.remove();
 
-    const cart = desktop.querySelector('a[href="cart.html"]');
-    if (cart && cart.parentElement === desktop) {
-      desktop.insertBefore(btn, cart);
+      if (desktop.querySelector('[data-action="open-signup"]')) return;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-action", "open-signup");
+      btn.className = isDarkHeader()
+        ? "inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs font-medium text-zinc-100 backdrop-blur transition hover:bg-white/10"
+        : "inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-xs font-medium text-zinc-800 shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]";
+      btn.textContent = "Sign Up";
+
+      const cart = desktop.querySelector('a[href="cart.html"]');
+      if (cart && cart.parentElement === desktop) {
+        desktop.insertBefore(btn, cart);
+      } else {
+        desktop.appendChild(btn);
+      }
+      return;
+    }
+
+    // Signed in: remove Sign Up and show avatar dropdown
+    desktop.querySelectorAll('[data-action="open-signup"]').forEach((el) => el.remove());
+
+    let wrapper = desktop.querySelector('[data-profile-wrapper="true"]');
+    if (!wrapper) {
+      const cart = desktop.querySelector('a[href="cart.html"]');
+      wrapper = document.createElement("div");
+      wrapper.setAttribute("data-profile-wrapper", "true");
+      wrapper.setAttribute("data-profile-open", "false");
+      wrapper.className = "relative";
+
+      const initial = getUserInitial(user);
+      const avatarBtnClass = isDarkHeader()
+        ? "inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/10"
+        : "inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]";
+
+      wrapper.innerHTML = `
+        <button
+          type="button"
+          data-action="toggle-profile"
+          aria-label="Open profile"
+          class="${avatarBtnClass}"
+        >
+          ${
+            initial
+              ? `<span class="text-sm font-semibold ${isDarkHeader() ? "text-zinc-100" : "text-zinc-800"}">${initial}</span>`
+              : `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ${isDarkHeader() ? "text-zinc-100" : "text-zinc-500"}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>`
+          }
+        </button>
+        <div
+          data-profile-dropdown="true"
+          aria-hidden="true"
+          class="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-zinc-200 bg-white shadow-lg transition-all duration-200 opacity-0 scale-95 pointer-events-none"
+          role="menu"
+        >
+          <div class="p-4 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                ${initial ? `<span class="text-sm font-semibold">${initial}</span>` : `<span class="text-sm font-semibold">U</span>`}
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-zinc-900" data-profile-name="true">—</p>
+                <p class="mt-0.5 text-[11px] text-zinc-500">View your details</p>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div>
+                <p class="text-[11px] font-medium text-zinc-500">Name</p>
+                <p class="font-semibold text-zinc-800" data-profile-name="true">—</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-medium text-zinc-500">Phone</p>
+                <p class="font-semibold text-zinc-800" data-profile-phone="true">—</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-medium text-zinc-500">Email</p>
+                <p class="font-semibold text-zinc-800" data-profile-email="true">—</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              data-action="logout"
+              class="mt-1 w-full inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-900"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      `;
+
+      updateProfileFields(wrapper);
+      if (cart && cart.parentElement === desktop) {
+        desktop.insertBefore(wrapper, cart.nextSibling);
+      } else {
+        desktop.appendChild(wrapper);
+      }
+
+      bindProfileDropdownGlobal();
     } else {
-      desktop.appendChild(btn);
+      updateProfileFields(wrapper);
     }
   }
 
@@ -266,19 +477,118 @@ function initSignupModalGlobal() {
     if (!menu) return;
     const container = menu.querySelector("div");
     if (!container) return;
-    if (container.querySelector('[data-action="open-signup"]')) return;
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.setAttribute("data-action", "open-signup");
-    btn.className = isDarkHeader()
-      ? "mt-1 inline-flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-white/10"
-      : "mt-1 inline-flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-800 shadow-sm hover:border-[#7db6ff] hover:bg-[#f5fbff]";
-    btn.innerHTML = `<span>Sign Up</span><span class="text-[11px] text-white/70">${
-      isDarkHeader() ? "Join" : "Join"
-    }</span>`;
+    const user = readUserProfile();
+    const existingProfile = container.querySelector('[data-profile-wrapper="true"]');
+    const existingSignup = container.querySelector('[data-action="open-signup"]');
 
-    container.appendChild(btn);
+    if (!user) {
+      if (existingProfile) existingProfile.remove();
+      if (existingSignup) return;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-action", "open-signup");
+      btn.className = isDarkHeader()
+        ? "mt-1 inline-flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-white/10"
+        : "mt-1 inline-flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-800 shadow-sm hover:border-[#7db6ff] hover:bg-[#f5fbff]";
+      btn.innerHTML = `<span>Sign Up</span><span class="text-[11px] text-white/70">${
+        isDarkHeader() ? "Join" : "Join"
+      }</span>`;
+      container.appendChild(btn);
+      return;
+    }
+
+    // Signed in: remove Sign Up and show avatar dropdown
+    if (existingSignup) existingSignup.remove();
+
+    let wrapper = existingProfile;
+    if (!wrapper) {
+      const initial = getUserInitial(user);
+
+      wrapper = document.createElement("div");
+      wrapper.setAttribute("data-profile-wrapper", "true");
+      wrapper.setAttribute("data-profile-open", "false");
+      wrapper.className = "relative mt-2";
+
+      wrapper.innerHTML = `
+        <button
+          type="button"
+          data-action="toggle-profile"
+          aria-label="Open profile"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]"
+        >
+          ${
+            initial
+              ? `<span class="text-sm font-semibold text-zinc-800">${initial}</span>`
+              : `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>`
+          }
+        </button>
+        <div
+          data-profile-dropdown="true"
+          aria-hidden="true"
+          class="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-zinc-200 bg-white shadow-lg transition-all duration-200 opacity-0 scale-95 pointer-events-none"
+          role="menu"
+        >
+          <div class="p-4 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                ${initial ? `<span class="text-sm font-semibold">${initial}</span>` : `<span class="text-sm font-semibold">U</span>`}
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-zinc-900" data-profile-name="true">—</p>
+                <p class="mt-0.5 text-[11px] text-zinc-500">View your details</p>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div>
+                <p class="text-[11px] font-medium text-zinc-500">Name</p>
+                <p class="font-semibold text-zinc-800" data-profile-name="true">—</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-medium text-zinc-500">Phone</p>
+                <p class="font-semibold text-zinc-800" data-profile-phone="true">—</p>
+              </div>
+              <div>
+                <p class="text-[11px] font-medium text-zinc-500">Email</p>
+                <p class="font-semibold text-zinc-800" data-profile-email="true">—</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              data-action="logout"
+              class="mt-1 w-full inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-900"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      `;
+
+      updateProfileFields(wrapper);
+
+      const cartLink = container.querySelector('a[href="cart.html"]');
+      if (cartLink && cartLink.parentElement === container) {
+        if (cartLink.nextSibling) {
+          container.insertBefore(wrapper, cartLink.nextSibling);
+        } else {
+          container.appendChild(wrapper);
+        }
+      } else if (cartLink) {
+        cartLink.insertAdjacentElement("afterend", wrapper);
+      } else {
+        container.appendChild(wrapper);
+      }
+
+      bindProfileDropdownGlobal();
+    } else {
+      updateProfileFields(wrapper);
+    }
   }
 
   function ensureModal() {
@@ -655,6 +965,34 @@ function initSignupModalGlobal() {
 
     await addDoc(collection(db, "users"), payload);
 
+    // Persist minimal profile for navbar avatar dropdown + keep auth data for checkout autofill.
+    try {
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({
+          name: fullName,
+          phone: phoneDigits,
+          email: "",
+        })
+      );
+      localStorage.setItem(
+        AUTH_PROFILE_KEY,
+        JSON.stringify({
+          fullName,
+          dob,
+          phone: phoneDigits,
+          role: userType,
+          branch: isStudent ? branchVal : "",
+          rollNumber: isStudent ? rollVal : "",
+          year: isStudent ? yearVal : "",
+          savedAt: Date.now(),
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+    window.dispatchEvent(new Event(USER_UPDATED_EVENT));
+
     showMiniToast("Sign up saved successfully");
     form.reset();
     setStudentVisibility(false);
@@ -667,6 +1005,7 @@ function initSignupModalGlobal() {
   }
 
   function bindOpenButtons() {
+    if (readUserProfile()) return;
     document.querySelectorAll('[data-action="open-signup"]').forEach((el) => {
       if (el.getAttribute("data-bound") === "true") return;
       el.setAttribute("data-bound", "true");
@@ -677,9 +1016,15 @@ function initSignupModalGlobal() {
     });
   }
 
+  bindProfileDropdownGlobal();
   ensureButtonInDesktopNav();
   ensureButtonInMobileMenu();
   bindOpenButtons();
+
+  window.addEventListener(USER_UPDATED_EVENT, () => {
+    ensureButtonInDesktopNav();
+    ensureButtonInMobileMenu();
+  });
 }
 
 function initAuthPage() {
@@ -825,10 +1170,21 @@ function initAuthPage() {
     };
 
     try {
-      localStorage.setItem("csmss_auth_profile", JSON.stringify(payload));
+      localStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(payload));
+
+      localStorage.setItem(
+        USER_KEY,
+        JSON.stringify({
+          name: nameVal,
+          phone: phoneDigits,
+          email: "",
+        })
+      );
     } catch {
       // Ignore storage errors in restricted environments
     }
+
+    window.dispatchEvent(new Event(USER_UPDATED_EVENT));
 
     if (success) success.classList.remove("hidden");
     showMiniToast("Profile saved (demo)");
