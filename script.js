@@ -641,15 +641,16 @@ function initSignupModalGlobal() {
               </div>
 
               <div>
-                <label for="signup-dob" class="text-xs font-medium text-zinc-700">Date of Birth *</label>
+                <label for="signup-email" class="text-xs font-medium text-zinc-700">Email *</label>
                 <input
-                  id="signup-dob"
-                  name="dob"
-                  type="date"
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
                   class="mt-1 w-full rounded-2xl border border-zinc-200 bg-[#f5f5f5] px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
                   required
                 />
-                <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="dob"></p>
+                <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="email"></p>
               </div>
             </div>
 
@@ -800,7 +801,7 @@ function initSignupModalGlobal() {
   }
 
   function clearErrors(root) {
-    ["fullName", "dob", "phone", "userType", "branch", "rollNumber", "year"].forEach(
+    ["fullName", "email", "phone", "userType", "branch", "rollNumber", "year"].forEach(
       (k) => setFieldError(root, k, "")
     );
   }
@@ -887,7 +888,7 @@ function initSignupModalGlobal() {
 
      const fd = new FormData(form);
      const fullName = String(fd.get("fullName") || "").trim();
-     const dob = String(fd.get("dob") || "").trim();
+    const emailVal = String(fd.get("email") || "").trim();
      const phoneDigits = onlyDigits(fd.get("phone") || "");
      const userType = getUserType();
 
@@ -897,9 +898,15 @@ function initSignupModalGlobal() {
        ok = false;
       setFieldError(modal, "fullName", "Full Name is required.");
   }
-  if (!dob) {
+  if (!emailVal) {
     ok = false;
-    setFieldError(modal, "dob", "Date of Birth is required.");
+    setFieldError(modal, "email", "Email is required.");
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailVal)) {
+      ok = false;
+      setFieldError(modal, "email", "Please enter a valid email.");
+    }
   }
   if (!phoneDigits) {
     ok = false;
@@ -937,7 +944,7 @@ function initSignupModalGlobal() {
 
   const payload = {
     fullName,
-    dob,
+    email: emailVal,
     phone: phoneDigits,
     userType,
     branch: isStudent ? branchVal : "",
@@ -972,14 +979,14 @@ function initSignupModalGlobal() {
         JSON.stringify({
           name: fullName,
           phone: phoneDigits,
-          email: "",
+          email: emailVal,
         })
       );
       localStorage.setItem(
         AUTH_PROFILE_KEY,
         JSON.stringify({
           fullName,
-          dob,
+          email: emailVal,
           phone: phoneDigits,
           role: userType,
           branch: isStudent ? branchVal : "",
@@ -1034,7 +1041,7 @@ function initAuthPage() {
   const footerYear = document.getElementById("footer-year");
   const phone = document.getElementById("phone");
   const fullName = document.getElementById("fullName");
-  const dob = document.getElementById("dob");
+  const email = document.getElementById("email");
   const branch = document.getElementById("branch");
   const year = document.getElementById("year");
 
@@ -1079,7 +1086,7 @@ function initAuthPage() {
   }
 
   function clearErrors() {
-    ["fullName", "dob", "phone", "role", "branch", "year"].forEach((k) =>
+    ["fullName", "email", "phone", "role", "branch", "year"].forEach((k) =>
       setFieldError(k, "")
     );
   }
@@ -1119,7 +1126,7 @@ function initAuthPage() {
     let ok = true;
 
     const nameVal = (fullName?.value || "").trim();
-    const dobVal = (dob?.value || "").trim();
+    const emailVal = (email?.value || "").trim();
     const phoneDigits = onlyDigits(phone?.value || "");
     const roleVal = getRole();
 
@@ -1127,9 +1134,15 @@ function initAuthPage() {
       ok = false;
       setFieldError("fullName", "Full Name is required.");
     }
-    if (!dobVal) {
+    if (!emailVal) {
       ok = false;
-      setFieldError("dob", "Date of Birth is required.");
+      setFieldError("email", "Email is required.");
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailVal)) {
+        ok = false;
+        setFieldError("email", "Please enter a valid email.");
+      }
     }
     if (!phoneDigits) {
       ok = false;
@@ -1161,7 +1174,7 @@ function initAuthPage() {
 
     const payload = {
       fullName: nameVal,
-      dob: dobVal,
+      email: emailVal,
       phone: phoneDigits,
       role: roleVal,
       branch: isStudent ? branch?.value || "" : "",
@@ -1177,7 +1190,7 @@ function initAuthPage() {
         JSON.stringify({
           name: nameVal,
           phone: phoneDigits,
-          email: "",
+          email: emailVal,
         })
       );
     } catch {
@@ -1498,7 +1511,7 @@ function renderCartPage() {
   const checkoutForm = document.getElementById("checkout-form");
   const msg = document.getElementById("checkout-message");
   const nameEl = document.getElementById("checkout-name");
-  const dobEl = document.getElementById("checkout-dob");
+  const emailEl = document.getElementById("checkout-email");
   const phoneEl = document.getElementById("checkout-phone");
   const roleEl = document.getElementById("checkout-role");
   const yearEl = document.getElementById("checkout-year");
@@ -1526,10 +1539,20 @@ function renderCartPage() {
       return;
     }
 
+    if (!profile.email) {
+      if (msg) {
+        msg.textContent =
+          "No email found in saved profile. Please login/register again.";
+        msg.classList.remove("hidden");
+      }
+      showMiniToast("Please login/register again");
+      return;
+    }
+
     if (msg) msg.classList.add("hidden");
 
     if (nameEl) nameEl.value = profile.fullName || "";
-    if (dobEl) dobEl.value = profile.dob || "";
+    if (emailEl) emailEl.value = profile.email || "";
     if (phoneEl) phoneEl.value = profile.phone || "";
     if (roleEl) roleEl.value = profile.role || "";
     if (yearEl) yearEl.value = profile.year || "";
