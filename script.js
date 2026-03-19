@@ -495,7 +495,6 @@ function initSignupModalGlobal() {
       btn.innerHTML = `<span>Sign Up</span><span class="text-[11px] text-white/70">${
         isDarkHeader() ? "Join" : "Join"
       }</span>`;
-
       container.appendChild(btn);
       return;
     }
