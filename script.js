@@ -1254,6 +1254,76 @@ function bindMenuButtons(root) {
 }
 
 // Page initializers
+function initHeroParallax() {
+  const hero = document.querySelector('[data-hero-parallax="true"]');
+  const bgImg = hero?.querySelector('[data-hero-bg="true"]');
+  if (!hero || !bgImg) return;
+
+  // Respect reduced motion preferences.
+  try {
+    if (
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+  } catch {
+    // ignore
+  }
+
+  bgImg.style.willChange = "transform";
+  bgImg.style.transformOrigin = "center center";
+
+  const getSettings = () => {
+    const isMobile = window.innerWidth < 768;
+    return {
+      // 0.2-0.3 multiplier of scrollY, clamped to keep the movement premium.
+      speed: isMobile ? 0.22 : 0.25,
+      maxTranslate: isMobile ? 18 : 28,
+      scale: isMobile ? 1.06 : 1.08,
+    };
+  };
+
+  let ticking = false;
+  let lastTransform = "";
+
+  const update = () => {
+    ticking = false;
+
+    const rect = hero.getBoundingClientRect();
+    const isActive = rect.bottom > -80 && rect.top < window.innerHeight + 80;
+    if (!isActive) {
+      if (lastTransform !== "") {
+        bgImg.style.transform = "";
+        lastTransform = "";
+      }
+      return;
+    }
+
+    const { speed, maxTranslate, scale } = getSettings();
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const rawTranslate = scrollY * speed;
+    const translateY = Math.max(-maxTranslate, Math.min(maxTranslate, rawTranslate));
+
+    const nextTransform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
+    if (nextTransform !== lastTransform) {
+      bgImg.style.transform = nextTransform;
+      lastTransform = nextTransform;
+    }
+  };
+
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  };
+
+  // Initial paint.
+  update();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+}
+
 function initHomePage() {
   const specialsRoot = document.getElementById("home-specials");
   const snacksRoot = document.getElementById("home-snacks");
@@ -1638,7 +1708,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initSignupModalGlobal();
 
   const page = document.body.getAttribute("data-page");
-  if (page === "home") initHomePage();
+  if (page === "home") {
+    initHeroParallax();
+    initHomePage();
+  }
   if (page === "menu") initMenuPage();
   if (page === "order") initOrderPage();
   if (page === "cart") renderCartPage();
