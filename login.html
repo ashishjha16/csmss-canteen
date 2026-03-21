@@ -66,25 +66,42 @@
           <a href="index.html" class="text-zinc-600 hover:text-[#12422e]">Home</a>
           <a href="menu.html" class="text-zinc-600 hover:text-[#12422e]">Menu</a>
           <a href="order.html" class="text-zinc-600 hover:text-[#12422e]">Order</a>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-1">
           <a
             href="cart.html"
-            class="inline-flex items-center gap-2 rounded-full bg-[#12422e] px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-emerald-900"
+            class="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-700 transition duration-200 hover:scale-105 hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#12422e]"
+            aria-label="Shopping cart"
           >
-            <span>Cart</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="h-6 w-6"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218a1.5 1.5 0 001.45-1.12l.729-2.7A1.5 1.5 0 0014.25 6H4.5a1.5 1.5 0 00-1.5 1.5v6.75a1.5 1.5 0 002.25 1.5z"
+              />
+            </svg>
             <span
-              id="nav-cart-count"
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-[11px] font-semibold text-white"
+              data-cart-quantity
+              class="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold leading-none text-white shadow-sm"
               >0</span
             >
           </a>
-        </div>
 
-        <!-- Mobile menu button -->
-        <button
-          id="mobile-menu-toggle"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:border-primary hover:text-primary md:hidden"
-          aria-label="Toggle navigation"
-        >
+          <!-- Mobile menu button -->
+          <button
+            id="mobile-menu-toggle"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:border-primary hover:text-primary md:hidden"
+            aria-label="Toggle navigation"
+          >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5"
@@ -96,6 +113,7 @@
             <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        </div>
       </nav>
 
       <!-- Mobile menu -->

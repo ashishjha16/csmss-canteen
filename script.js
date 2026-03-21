@@ -187,10 +187,14 @@ function addToCart(itemId) {
 function updateCartBadges() {
   const cart = readCart();
   const count = getCartCount(cart);
+  const text = String(count);
+  document.querySelectorAll("[data-cart-quantity]").forEach((el) => {
+    el.textContent = text;
+  });
   const nav = document.getElementById("nav-cart-count");
   const mobile = document.getElementById("mobile-cart-count");
-  if (nav) nav.textContent = String(count);
-  if (mobile) mobile.textContent = String(count);
+  if (nav) nav.textContent = text;
+  if (mobile) mobile.textContent = text;
 }
 
 function showMiniToast(message) {
@@ -1700,6 +1704,11 @@ function renderCartPage() {
 
   refresh();
 }
+
+// Keep header badge in sync when cart changes in another tab
+window.addEventListener("storage", (e) => {
+  if (e.key === CART_KEY) updateCartBadges();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   setCurrentYear();
