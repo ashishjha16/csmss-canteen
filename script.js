@@ -359,9 +359,13 @@ function showMiniToast(message) {
     toast.className = "mini-toast is-hidden";
     document.body.appendChild(toast);
   }
+
   toast.textContent = message;
   toast.classList.remove("is-hidden");
-  setTimeout(() => {
+
+  if (toast._hideTimer) clearTimeout(toast._hideTimer);
+
+  toast._hideTimer = setTimeout(() => {
     toast.classList.add("is-hidden");
   }, 1600);
 }
@@ -1560,6 +1564,7 @@ function initOrderPage() {
   const form = document.getElementById("order-form");
   const success = document.getElementById("order-success");
   const datalist = document.getElementById("food-suggestions");
+
   if (datalist) {
     ALL_ITEMS.forEach((item) => {
       const opt = document.createElement("option");
@@ -1567,52 +1572,64 @@ function initOrderPage() {
       datalist.appendChild(opt);
     });
   }
-  if (form) {
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
 
-  const name = document.getElementById("fullName")?.value.trim() || "";
-  const phone = document.getElementById("phone")?.value.trim() || "";
+  if (!form) return;
 
-  if (!name || !phone) {
-    alert("Please fill all details");
-    return;
-  }
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
 
-  try {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-    const { getFirestore, collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+    const studentName =
+      document.getElementById("student-name")?.value.trim() || "";
+    const rollNumber =
+      document.getElementById("roll-number")?.value.trim() || "";
+    const foodItem = document.getElementById("food-item")?.value.trim() || "";
+    const quantity =
+      Number(document.getElementById("quantity")?.value || 1) || 1;
+    const pickupTime =
+      document.getElementById("pickup-time")?.value.trim() || "";
+    const notes = document.getElementById("notes")?.value.trim() || "";
 
-    const firebaseConfig = {
+    if (!studentName || !rollNumber || !foodItem || !pickupTime) {
+      showMiniToast("Please fill all required order details");
+      return;
+    }
 
-      apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
-      authDomain: "csmss-canteen-96d28.firebaseapp.com",
-      projectId: "csmss-canteen-96d28",
-      storageBucket: "csmss-canteen-96d28.firebasestorage.app",
-      messagingSenderId: "541374142906",
-      appId: "1:541374142906:web:8112606f02edbd6eada583",
-      measurementId: "G-JBD9TPTXET"
+    const matchedItem = ALL_ITEMS.find(
+      (item) => item.name.toLowerCase() === foodItem.toLowerCase()
+    );
+
+    const orderRecord = {
+      id: `ORD-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      items: [
+        {
+          id: matchedItem?.id || foodItem.toLowerCase().replace(/\s+/g, "-"),
+          name: foodItem,
+          price: matchedItem?.price || 0,
+          quantity,
+          lineTotal: (matchedItem?.price || 0) * quantity,
+        },
+      ],
+      total: (matchedItem?.price || 0) * quantity,
+      itemCount: quantity,
+      source: "manual-order-form",
+      studentName,
+      rollNumber,
+      pickupTime,
+      notes,
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const saved = appendOrderForCurrentUser(orderRecord);
 
-    await addDoc(collection(db, "users"), {
-      name,
-      phone,
-      createdAt: new Date().toISOString()
-    });
+    if (!saved) {
+      showMiniToast("Please sign up/login first to save order history");
+      return;
+    }
 
-    alert("Data saved successfully ✅");
-
+    if (success) success.classList.remove("is-hidden");
     form.reset();
-
-  } catch (error) {
-    console.error(error);
-    alert("Error: " + error.message);
-  }
-});
-  }
+    showMiniToast("Order saved successfully");
+  });
 }
 
 function renderCartPage() {
