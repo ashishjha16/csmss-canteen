@@ -3,6 +3,8 @@ const CART_KEY = "csmss_canteen_cart";
 const USER_KEY = "csmss_user";
 const AUTH_PROFILE_KEY = "csmss_auth_profile";
 const USER_UPDATED_EVENT = "csmss-user-updated";
+const ORDERS_KEY = "csmss_canteen_order_history";
+const ORDER_HISTORY_UPDATED_EVENT = "csmss-order-history-updated";
 
 function readCart() {
   try {
@@ -35,6 +37,158 @@ function getCartTotals(items) {
 
 function formatCurrency(value) {
   return `₹${value.toFixed(0)}`;
+}
+
+function escapeHtml(str) {
+  const s = String(str ?? "");
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+/** Normalized email for per-user order storage */
+function getUserEmailKeyForOrders() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (raw) {
+      const u = JSON.parse(raw);
+      const e = String(u?.email || "").trim().toLowerCase();
+      if (e) return e;
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const raw = localStorage.getItem(AUTH_PROFILE_KEY);
+    const p = raw ? JSON.parse(raw) : null;
+    const e = String(p?.email || "").trim().toLowerCase();
+    if (e) return e;
+  } catch {
+    /* ignore */
+  }
+  return "";
+}
+
+function readOrderHistoryMap() {
+  try {
+    const raw = localStorage.getItem(ORDERS_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    return data && typeof data === "object" ? data : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeOrderHistoryMap(map) {
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(map));
+}
+
+function getOrdersForCurrentUser() {
+  const email = getUserEmailKeyForOrders();
+  if (!email) return [];
+  const map = readOrderHistoryMap();
+  const list = map[email];
+  return Array.isArray(list) ? list : [];
+}
+
+/**
+ * @param {{ id: string, createdAt: string, items: Array, total: number, itemCount: number }} orderRecord
+ */
+function appendOrderForCurrentUser(orderRecord) {
+  const email = getUserEmailKeyForOrders();
+  if (!email) return false;
+  const map = readOrderHistoryMap();
+  if (!map[email]) map[email] = [];
+  map[email].unshift(orderRecord);
+  writeOrderHistoryMap(map);
+  window.dispatchEvent(new Event(ORDER_HISTORY_UPDATED_EVENT));
+  return true;
+}
+
+function buildOrderRecordFromCart(cart) {
+  const totals = getCartTotals(cart);
+  const id = `ORD-${Date.now()}`;
+  const createdAt = new Date().toISOString();
+  const items = cart.map((i) => ({
+    id: i.id,
+    name: i.name,
+    price: Number(i.price) || 0,
+    quantity: Number(i.quantity) || 0,
+    lineTotal: (Number(i.price) || 0) * (Number(i.quantity) || 0),
+  }));
+  return {
+    id,
+    createdAt,
+    items,
+    total: totals.total,
+    itemCount: totals.items,
+  };
+}
+
+function formatOrderDateTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return String(iso);
+  }
+}
+
+function renderOrderHistoryInProfile(wrapper) {
+  let root = wrapper.querySelector('[data-order-history-list]');
+  if (!root) {
+    const dropdown = wrapper.querySelector('[data-profile-dropdown="true"]');
+    const inner = dropdown?.querySelector(".profile-dropdown__inner");
+    const logoutBtn = inner?.querySelector('[data-action="logout"]');
+    if (!inner || !logoutBtn) return;
+    const block = document.createElement("div");
+    block.className = "order-history-block";
+    block.innerHTML = `
+      <p class="order-history-title">Order history</p>
+      <div data-order-history-list class="order-history-list"></div>
+    `;
+    inner.insertBefore(block, logoutBtn);
+    root = block.querySelector('[data-order-history-list]');
+  }
+  if (!root) return;
+  const orders = getOrdersForCurrentUser();
+  if (!orders.length) {
+    root.innerHTML = '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">No orders yet.</p>';
+    return;
+  }
+  root.innerHTML = orders
+    .map(
+      (order) => `
+    <div class="order-history-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
+        <p style="margin:0;font-size:11px;font-weight:600;color:var(--color-zinc-900)">${escapeHtml(order.id)}</p>
+        <p style="margin:0;font-size:10px;color:var(--color-zinc-500);white-space:nowrap">${escapeHtml(
+          formatOrderDateTime(order.createdAt)
+        )}</p>
+      </div>
+      <ul style="margin:0.5rem 0 0;padding:0;list-style:none;font-size:11px;color:var(--color-zinc-700)">
+        ${order.items
+          .map(
+            (it) => `
+          <li style="display:flex;justify-content:space-between;gap:0.5rem">
+            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.name)} × ${escapeHtml(
+              String(it.quantity)
+            )}</span>
+            <span style="flex-shrink:0;font-weight:500">${formatCurrency(it.lineTotal)}</span>
+          </li>`
+          )
+          .join("")}
+      </ul>
+      <p style="margin:0.5rem 0 0;padding-top:0.5rem;border-top:1px solid rgba(228,228,231,0.8);font-size:11px;font-weight:600;color:var(--color-primary)">Total: ${formatCurrency(
+        order.total
+      )}</p>
+    </div>
+  `
+    )
+    .join("");
 }
 
 // Basic menu data used across pages
@@ -202,15 +356,13 @@ function showMiniToast(message) {
   if (!toast) {
     toast = document.createElement("div");
     toast.id = "mini-toast";
-    toast.className =
-      "fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-900 px-4 py-2 text-xs text-white shadow-lg transition opacity-0";
+    toast.className = "mini-toast is-hidden";
     document.body.appendChild(toast);
   }
   toast.textContent = message;
-  toast.classList.remove("opacity-0", "translate-y-3");
-  toast.classList.add("opacity-100");
+  toast.classList.remove("is-hidden");
   setTimeout(() => {
-    toast.classList.add("opacity-0");
+    toast.classList.add("is-hidden");
   }, 1600);
 }
 
@@ -224,11 +376,20 @@ function setupMobileNav() {
   const menu = document.getElementById("mobile-menu");
   if (!toggle || !menu) return;
   toggle.addEventListener("click", () => {
-    menu.classList.toggle("hidden");
+    menu.classList.toggle("is-hidden");
   });
 }
 
 function initSignupModalGlobal() {
+  if (!initSignupModalGlobal._orderHistoryListener) {
+    initSignupModalGlobal._orderHistoryListener = true;
+    window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, () => {
+      document
+        .querySelectorAll('[data-profile-wrapper="true"]')
+        .forEach((w) => renderOrderHistoryInProfile(w));
+    });
+  }
+
   const SIGNUP_STORAGE_KEY = "csmss_canteen_signup_profiles";
   const modalId = "signup-modal";
   const DEFAULT_EMAIL = "";
@@ -258,25 +419,11 @@ function initSignupModalGlobal() {
     if (!dropdown) return;
 
     if (isOpen) {
-      dropdown.classList.remove(
-        "opacity-0",
-        "scale-95",
-        "pointer-events-none"
-      );
-      dropdown.classList.add("opacity-100", "scale-100", "pointer-events-auto");
+      dropdown.classList.add("profile-dropdown--open");
       dropdown.setAttribute("aria-hidden", "false");
       wrapper.setAttribute("data-profile-open", "true");
     } else {
-      dropdown.classList.add(
-        "opacity-0",
-        "scale-95",
-        "pointer-events-none"
-      );
-      dropdown.classList.remove(
-        "opacity-100",
-        "scale-100",
-        "pointer-events-auto"
-      );
+      dropdown.classList.remove("profile-dropdown--open");
       dropdown.setAttribute("aria-hidden", "true");
       wrapper.setAttribute("data-profile-open", "false");
     }
@@ -343,6 +490,7 @@ function initSignupModalGlobal() {
     setText('[data-profile-name="true"]', user.name);
     setText('[data-profile-phone="true"]', user.phone);
     setText('[data-profile-email="true"]', user.email);
+    renderOrderHistoryInProfile(wrapper);
   }
 
   function onlyDigits(value) {
@@ -351,58 +499,89 @@ function initSignupModalGlobal() {
 
   function isDarkHeader() {
     const header = document.querySelector("header");
-    const cls = header?.className || "";
-    return cls.includes("bg-[#12422e]") || cls.includes("bg-[#12422e]/");
+    return header?.classList.contains("site-header--dark") ?? false;
+  }
+
+  function getHeaderActionsContainer() {
+    const nav = document.querySelector("header nav");
+    if (!nav) return null;
+    return nav.querySelector("[data-header-actions]") || nav.querySelector(".nav-actions");
+  }
+
+  function removeGuestAuthUI(container) {
+    container.querySelectorAll('[data-auth-guest="true"]').forEach((el) => el.remove());
+    container
+      .querySelectorAll('[data-action="open-signup"]')
+      .forEach((el) => {
+        if (!el.closest("[data-auth-guest]")) el.remove();
+      });
   }
 
   function ensureButtonInDesktopNav() {
-    const nav = document.querySelector("header nav");
-    if (!nav) return;
-
-    const desktop = Array.from(nav.children).find(
-      (el) => el?.classList?.contains("md:flex") && el?.classList?.contains("hidden")
-    );
+    const desktop = getHeaderActionsContainer();
     if (!desktop) return;
+
+    const cart = desktop.querySelector('a[href="cart.html"]');
 
     const user = readUserProfile();
     if (!user) {
-      const existingProfile = desktop.querySelector('[data-profile-wrapper="true"]');
-      if (existingProfile) existingProfile.remove();
+      desktop.querySelectorAll('[data-profile-wrapper="true"]').forEach((el) => el.remove());
+      removeGuestAuthUI(desktop);
 
-      if (desktop.querySelector('[data-action="open-signup"]')) return;
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.setAttribute("data-action", "open-signup");
-      btn.className = isDarkHeader()
-        ? "inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs font-medium text-zinc-100 backdrop-blur transition hover:bg-white/10"
-        : "inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-xs font-medium text-zinc-800 shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]";
-      btn.textContent = "Sign Up";
-
-      const cart = desktop.querySelector('a[href="cart.html"]');
-      if (cart && cart.parentElement === desktop) {
-        desktop.insertBefore(btn, cart);
-      } else {
-        desktop.appendChild(btn);
+      if (desktop.querySelector('[data-auth-guest="true"]')) {
+        bindOpenButtons();
+        return;
       }
+
+      const guestWrap = document.createElement("div");
+      guestWrap.setAttribute("data-auth-guest", "true");
+      guestWrap.className = "guest-auth-cluster";
+
+      const loginClass = isDarkHeader()
+        ? "btn-guest-login"
+        : "btn-guest-login btn-guest-login--light";
+
+      const signupClass = isDarkHeader()
+        ? "btn-guest-signup"
+        : "btn-guest-signup btn-guest-signup--light";
+
+      const onAuthPage = document.body.getAttribute("data-page") === "auth";
+      guestWrap.innerHTML = onAuthPage
+        ? `
+        <button type="button" data-action="open-signup" class="${signupClass}">
+          Sign up
+        </button>
+      `
+        : `
+        <a href="login.html" class="${loginClass}">Login</a>
+        <button type="button" data-action="open-signup" class="${signupClass}">
+          Sign up
+        </button>
+      `;
+
+      if (cart && cart.parentElement === desktop) {
+        desktop.insertBefore(guestWrap, cart);
+      } else {
+        desktop.appendChild(guestWrap);
+      }
+      bindOpenButtons();
       return;
     }
 
-    // Signed in: remove Sign Up and show avatar dropdown
-    desktop.querySelectorAll('[data-action="open-signup"]').forEach((el) => el.remove());
+    // Signed in: remove guest UI and show avatar dropdown
+    removeGuestAuthUI(desktop);
 
     let wrapper = desktop.querySelector('[data-profile-wrapper="true"]');
     if (!wrapper) {
-      const cart = desktop.querySelector('a[href="cart.html"]');
       wrapper = document.createElement("div");
       wrapper.setAttribute("data-profile-wrapper", "true");
       wrapper.setAttribute("data-profile-open", "false");
-      wrapper.className = "relative";
+      wrapper.className = "profile-wrap";
 
       const initial = getUserInitial(user);
       const avatarBtnClass = isDarkHeader()
-        ? "inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/10"
-        : "inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]";
+        ? "avatar-btn"
+        : "avatar-btn avatar-btn--light";
 
       wrapper.innerHTML = `
         <button
@@ -413,8 +592,8 @@ function initSignupModalGlobal() {
         >
           ${
             initial
-              ? `<span class="text-sm font-semibold ${isDarkHeader() ? "text-zinc-100" : "text-zinc-800"}">${initial}</span>`
-              : `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ${isDarkHeader() ? "text-zinc-100" : "text-zinc-500"}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ? `<span class="avatar-btn__initial">${initial}</span>`
+              : `<svg xmlns="http://www.w3.org/2000/svg" class="avatar-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>`
@@ -423,40 +602,41 @@ function initSignupModalGlobal() {
         <div
           data-profile-dropdown="true"
           aria-hidden="true"
-          class="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-zinc-200 bg-white shadow-lg transition-all duration-200 opacity-0 scale-95 pointer-events-none"
+          class="profile-dropdown"
           role="menu"
         >
-          <div class="p-4 space-y-3">
-            <div class="flex items-start gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                ${initial ? `<span class="text-sm font-semibold">${initial}</span>` : `<span class="text-sm font-semibold">U</span>`}
+          <div class="profile-dropdown__inner">
+            <div class="profile-header-row">
+              <div class="profile-avatar-lg">
+                ${initial ? `<span>${initial}</span>` : `<span>U</span>`}
               </div>
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-zinc-900" data-profile-name="true">—</p>
-                <p class="mt-0.5 text-[11px] text-zinc-500">View your details</p>
-              </div>
-            </div>
-
-            <div class="space-y-2 text-sm">
-              <div>
-                <p class="text-[11px] font-medium text-zinc-500">Name</p>
-                <p class="font-semibold text-zinc-800" data-profile-name="true">—</p>
-              </div>
-              <div>
-                <p class="text-[11px] font-medium text-zinc-500">Phone</p>
-                <p class="font-semibold text-zinc-800" data-profile-phone="true">—</p>
-              </div>
-              <div>
-                <p class="text-[11px] font-medium text-zinc-500">Email</p>
-                <p class="font-semibold text-zinc-800" data-profile-email="true">—</p>
+              <div class="profile-dropdown__meta">
+                <p class="profile-name-main" data-profile-name="true">—</p>
+                <p class="profile-subtitle">View your details</p>
               </div>
             </div>
 
-            <button
-              type="button"
-              data-action="logout"
-              class="mt-1 w-full inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-900"
-            >
+            <div class="profile-details-stack">
+              <div>
+                <p class="profile-field-label">Name</p>
+                <p class="profile-field-value" data-profile-name="true">—</p>
+              </div>
+              <div>
+                <p class="profile-field-label">Phone</p>
+                <p class="profile-field-value" data-profile-phone="true">—</p>
+              </div>
+              <div>
+                <p class="profile-field-label">Email</p>
+                <p class="profile-field-value" data-profile-email="true">—</p>
+              </div>
+            </div>
+
+            <div class="order-history-block">
+              <p class="order-history-title">Order history</p>
+              <div data-order-history-list class="order-history-list"></div>
+            </div>
+
+            <button type="button" data-action="logout" class="btn-logout">
               Logout
             </button>
           </div>
@@ -465,7 +645,7 @@ function initSignupModalGlobal() {
 
       updateProfileFields(wrapper);
       if (cart && cart.parentElement === desktop) {
-        desktop.insertBefore(wrapper, cart.nextSibling);
+        desktop.insertBefore(wrapper, cart);
       } else {
         desktop.appendChild(wrapper);
       }
@@ -484,48 +664,78 @@ function initSignupModalGlobal() {
 
     const user = readUserProfile();
     const existingProfile = container.querySelector('[data-profile-wrapper="true"]');
-    const existingSignup = container.querySelector('[data-action="open-signup"]');
 
     if (!user) {
       if (existingProfile) existingProfile.remove();
-      if (existingSignup) return;
+      removeGuestAuthUI(container);
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.setAttribute("data-action", "open-signup");
-      btn.className = isDarkHeader()
-        ? "mt-1 inline-flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-white/10"
-        : "mt-1 inline-flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-800 shadow-sm hover:border-[#7db6ff] hover:bg-[#f5fbff]";
-      btn.innerHTML = `<span>Sign Up</span><span class="text-[11px] text-white/70">${
-        isDarkHeader() ? "Join" : "Join"
-      }</span>`;
-      container.appendChild(btn);
+      if (container.querySelector('[data-auth-guest="true"]')) {
+        bindOpenButtons();
+        return;
+      }
+
+      const guestWrap = document.createElement("div");
+      guestWrap.setAttribute("data-auth-guest", "true");
+      guestWrap.className =
+        "mobile-guest-box" + (isDarkHeader() ? "" : " mobile-guest-box--light");
+
+      const loginClass = isDarkHeader()
+        ? "btn-guest-login"
+        : "btn-guest-login btn-guest-login--light";
+
+      const signupClass = isDarkHeader()
+        ? "btn-guest-signup"
+        : "btn-guest-signup btn-guest-signup--light";
+
+      const onAuthPage = document.body.getAttribute("data-page") === "auth";
+      guestWrap.innerHTML = onAuthPage
+        ? `
+        <button type="button" data-action="open-signup" class="${signupClass}">
+          Sign up
+        </button>
+      `
+        : `
+        <a href="login.html" class="${loginClass}">Login</a>
+        <button type="button" data-action="open-signup" class="${signupClass}">
+          Sign up
+        </button>
+      `;
+
+      const cartLink = container.querySelector('a[href="cart.html"]');
+      if (cartLink && cartLink.parentElement === container) {
+        container.insertBefore(guestWrap, cartLink);
+      } else {
+        container.appendChild(guestWrap);
+      }
+      bindOpenButtons();
       return;
     }
 
-    // Signed in: remove Sign Up and show avatar dropdown
-    if (existingSignup) existingSignup.remove();
+    removeGuestAuthUI(container);
 
     let wrapper = existingProfile;
     if (!wrapper) {
       const initial = getUserInitial(user);
+      const mobileAvatarClass = isDarkHeader()
+        ? "avatar-btn avatar-btn--mobile-dark"
+        : "avatar-btn avatar-btn--light";
 
       wrapper = document.createElement("div");
       wrapper.setAttribute("data-profile-wrapper", "true");
       wrapper.setAttribute("data-profile-open", "false");
-      wrapper.className = "relative mt-2";
+      wrapper.className = "profile-wrap profile-wrap--mobile";
 
       wrapper.innerHTML = `
         <button
           type="button"
           data-action="toggle-profile"
           aria-label="Open profile"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition hover:border-[#7db6ff] hover:bg-[#f5fbff]"
+          class="${mobileAvatarClass}"
         >
           ${
             initial
-              ? `<span class="text-sm font-semibold text-zinc-800">${initial}</span>`
-              : `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ? `<span class="avatar-btn__initial">${initial}</span>`
+              : `<svg xmlns="http://www.w3.org/2000/svg" class="avatar-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>`
@@ -534,40 +744,41 @@ function initSignupModalGlobal() {
         <div
           data-profile-dropdown="true"
           aria-hidden="true"
-          class="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-zinc-200 bg-white shadow-lg transition-all duration-200 opacity-0 scale-95 pointer-events-none"
+          class="profile-dropdown profile-dropdown--mobile"
           role="menu"
         >
-          <div class="p-4 space-y-3">
-            <div class="flex items-start gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                ${initial ? `<span class="text-sm font-semibold">${initial}</span>` : `<span class="text-sm font-semibold">U</span>`}
+          <div class="profile-dropdown__inner">
+            <div class="profile-header-row">
+              <div class="profile-avatar-lg">
+                ${initial ? `<span>${initial}</span>` : `<span>U</span>`}
               </div>
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-zinc-900" data-profile-name="true">—</p>
-                <p class="mt-0.5 text-[11px] text-zinc-500">View your details</p>
-              </div>
-            </div>
-
-            <div class="space-y-2 text-sm">
-              <div>
-                <p class="text-[11px] font-medium text-zinc-500">Name</p>
-                <p class="font-semibold text-zinc-800" data-profile-name="true">—</p>
-              </div>
-              <div>
-                <p class="text-[11px] font-medium text-zinc-500">Phone</p>
-                <p class="font-semibold text-zinc-800" data-profile-phone="true">—</p>
-              </div>
-              <div>
-                <p class="text-[11px] font-medium text-zinc-500">Email</p>
-                <p class="font-semibold text-zinc-800" data-profile-email="true">—</p>
+              <div class="profile-dropdown__meta">
+                <p class="profile-name-main" data-profile-name="true">—</p>
+                <p class="profile-subtitle">View your details</p>
               </div>
             </div>
 
-            <button
-              type="button"
-              data-action="logout"
-              class="mt-1 w-full inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-900"
-            >
+            <div class="profile-details-stack">
+              <div>
+                <p class="profile-field-label">Name</p>
+                <p class="profile-field-value" data-profile-name="true">—</p>
+              </div>
+              <div>
+                <p class="profile-field-label">Phone</p>
+                <p class="profile-field-value" data-profile-phone="true">—</p>
+              </div>
+              <div>
+                <p class="profile-field-label">Email</p>
+                <p class="profile-field-value" data-profile-email="true">—</p>
+              </div>
+            </div>
+
+            <div class="order-history-block">
+              <p class="order-history-title">Order history</p>
+              <div data-order-history-list class="order-history-list"></div>
+            </div>
+
+            <button type="button" data-action="logout" class="btn-logout">
               Logout
             </button>
           </div>
@@ -578,13 +789,9 @@ function initSignupModalGlobal() {
 
       const cartLink = container.querySelector('a[href="cart.html"]');
       if (cartLink && cartLink.parentElement === container) {
-        if (cartLink.nextSibling) {
-          container.insertBefore(wrapper, cartLink.nextSibling);
-        } else {
-          container.appendChild(wrapper);
-        }
+        container.insertBefore(wrapper, cartLink);
       } else if (cartLink) {
-        cartLink.insertAdjacentElement("afterend", wrapper);
+        cartLink.insertAdjacentElement("beforebegin", wrapper);
       } else {
         container.appendChild(wrapper);
       }
@@ -601,114 +808,109 @@ function initSignupModalGlobal() {
 
     modal = document.createElement("div");
     modal.id = modalId;
-    modal.className =
-      "fixed inset-0 z-[60] hidden items-end sm:items-center justify-center p-4";
+    modal.className = "signup-modal";
     modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
     modal.setAttribute("aria-hidden", "true");
 
     modal.innerHTML = `
-      <div data-signup-backdrop class="absolute inset-0 bg-black/45 backdrop-blur-[2px]"></div>
-      <div class="relative w-full max-w-xl">
-        <div class="rounded-3xl border border-white/20 bg-white shadow-2xl shadow-black/10 overflow-hidden">
-          <div class="flex items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
+      <div data-signup-backdrop class="signup-modal__backdrop"></div>
+      <div class="signup-modal__panel">
+        <div class="signup-modal__card">
+          <div class="signup-modal__header">
             <div>
-              <p class="text-sm font-semibold text-zinc-900">Sign Up</p>
-              <p class="mt-0.5 text-[11px] text-zinc-500">Student fields appear only when Student is selected.</p>
+              <p class="signup-modal__title">Sign Up</p>
+              <p class="signup-modal__lead">Student fields appear only when Student is selected.</p>
             </div>
             <button
               type="button"
               data-action="close-signup"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:border-[#7db6ff] hover:bg-[#f5fbff]"
+              class="icon-btn"
               aria-label="Close"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          <form id="signup-form" class="px-5 py-5 space-y-4" novalidate>
-            <div class="grid gap-4 sm:grid-cols-2">
+          <form id="signup-form" class="signup-form" novalidate>
+            <div class="signup-form__row2">
               <div>
-                <label for="signup-fullName" class="text-xs font-medium text-zinc-700">Full Name *</label>
+                <label for="signup-fullName" class="signup-label">Full Name *</label>
                 <input
                   id="signup-fullName"
                   name="fullName"
                   type="text"
                   autocomplete="name"
-                  class="mt-1 w-full rounded-2xl border border-zinc-200 bg-[#f5f5f5] px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
+                  class="signup-input"
                   placeholder="Enter your full name"
                   required
                 />
-                <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="fullName"></p>
+                <p class="signup-error is-hidden" data-error-for="fullName"></p>
               </div>
 
               <div>
-                <label for="signup-email" class="text-xs font-medium text-zinc-700">Email *</label>
+                <label for="signup-email" class="signup-label">Email *</label>
                 <input
                   id="signup-email"
                   name="email"
                   type="email"
                   placeholder="Enter your email"
-                  class="mt-1 w-full rounded-2xl border border-zinc-200 bg-[#f5f5f5] px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
+                  class="signup-input"
                   required
                 />
-                <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="email"></p>
+                <p class="signup-error is-hidden" data-error-for="email"></p>
               </div>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="signup-form__row2">
               <div>
-                <label for="signup-phone" class="text-xs font-medium text-zinc-700">Phone Number *</label>
+                <label for="signup-phone" class="signup-label">Phone Number *</label>
                 <input
                   id="signup-phone"
                   name="phone"
                   type="tel"
                   inputmode="numeric"
                   maxlength="10"
-                  class="mt-1 w-full rounded-2xl border border-zinc-200 bg-[#f5f5f5] px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:bg-white focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
+                  class="signup-input"
                   placeholder="10-digit number"
                   required
                 />
-                <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="phone"></p>
+                <p class="signup-error is-hidden" data-error-for="phone"></p>
               </div>
 
-              <fieldset class="space-y-2">
-                <legend class="text-xs font-medium text-zinc-700">User Type *</legend>
-                <div class="grid grid-cols-2 gap-2">
-                  <label class="flex cursor-pointer items-center justify-between gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-xs font-medium text-zinc-800 transition hover:border-[#7db6ff]">
+              <fieldset class="signup-fieldset">
+                <legend>User Type *</legend>
+                <div class="signup-role-grid">
+                  <label class="signup-role-label">
                     <span>Staff</span>
-                    <input type="radio" name="userType" value="Staff" class="h-4 w-4 accent-[#12422e]" required />
+                    <input type="radio" name="userType" value="Staff" class="radio-accent" required />
                   </label>
-                  <label class="flex cursor-pointer items-center justify-between gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-xs font-medium text-zinc-800 transition hover:border-[#7db6ff]">
+                  <label class="signup-role-label">
                     <span>Student</span>
-                    <input type="radio" name="userType" value="Student" class="h-4 w-4 accent-[#12422e]" required />
+                    <input type="radio" name="userType" value="Student" class="radio-accent" required />
                   </label>
                 </div>
-                <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="userType"></p>
+                <p class="signup-error is-hidden" data-error-for="userType"></p>
               </fieldset>
             </div>
 
             <div
               id="signup-student-fields"
-              class="overflow-hidden rounded-2xl border border-[#d7ebff] bg-[#f5fbff] px-4 transition-[max-height,opacity,transform] duration-300 ease-out max-h-0 opacity-0 -translate-y-1"
+              class="collapsible-panel collapsible-panel--signup"
               aria-hidden="true"
             >
-              <div class="py-4 space-y-4">
-                <div class="flex items-center justify-between gap-3">
-                  <p class="text-sm font-semibold text-zinc-900">Student details</p>
-                  <span class="text-[11px] font-medium text-[#12422e] bg-[#12422e]/10 px-2 py-0.5 rounded-full">Required</span>
+              <div class="collapsible-panel__inner">
+                <div class="collapsible-panel__head">
+                  <h3>Student details</h3>
+                  <span class="badge-pill">Required</span>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="signup-form__row2" style="margin-top: 1rem">
                   <div>
-                    <label for="signup-branch" class="text-xs font-medium text-zinc-700">Branch *</label>
-                    <select
-                      id="signup-branch"
-                      name="branch"
-                      class="mt-1 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
-                    >
+                    <label for="signup-branch" class="signup-label">Branch *</label>
+                    <select id="signup-branch" name="branch" class="signup-input">
                       <option value="">Select branch</option>
                       <option>Computer Science</option>
                       <option>Electrical</option>
@@ -718,50 +920,42 @@ function initSignupModalGlobal() {
                       <option>ACT</option>
                       <option>Civil</option>
                     </select>
-                    <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="branch"></p>
+                    <p class="signup-error is-hidden" data-error-for="branch"></p>
                   </div>
 
                   <div>
-                    <label for="signup-roll" class="text-xs font-medium text-zinc-700">Roll Number *</label>
+                    <label for="signup-roll" class="signup-label">Roll Number *</label>
                     <input
                       id="signup-roll"
                       name="rollNumber"
                       type="text"
-                      class="mt-1 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
+                      class="signup-input"
                       placeholder="Enter roll number"
                     />
-                    <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="rollNumber"></p>
+                    <p class="signup-error is-hidden" data-error-for="rollNumber"></p>
                   </div>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="signup-form__row2">
                   <div>
-                    <label for="signup-year" class="text-xs font-medium text-zinc-700">Year *</label>
-                    <select
-                      id="signup-year"
-                      name="year"
-                      class="mt-1 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:ring-4 focus:ring-[#cfe6ff] focus:border-[#7db6ff]"
-                    >
+                    <label for="signup-year" class="signup-label">Year *</label>
+                    <select id="signup-year" name="year" class="signup-input">
                       <option value="">Select year</option>
                       <option>1st Year</option>
                       <option>2nd Year</option>
                       <option>3rd Year</option>
                       <option>4th Year</option>
                     </select>
-                    <p class="mt-1 text-[11px] text-rose-600 hidden" data-error-for="year"></p>
+                    <p class="signup-error is-hidden" data-error-for="year"></p>
                   </div>
-                  <div class="hidden sm:block"></div>
+                  <div class="signup-grid-spacer" aria-hidden="true"></div>
                 </div>
               </div>
             </div>
 
-            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <p class="text-[11px] text-zinc-500">Fill details and submit.</p>
-              <button
-              type="submit"
-              class="inline-flex items-center justify-center rounded-full bg-[#1f6f4a] px-6 py-2.5 text-sm font-medium text-white shadow-sm">
-              Submit
-              </button>
+            <div class="signup-form__footer">
+              <p class="text-muted" style="font-size: 11px">Fill details and submit.</p>
+              <button type="submit" class="btn-signup-submit">Submit</button>
             </div>
           </form>
         </div>
@@ -774,8 +968,7 @@ function initSignupModalGlobal() {
 
   function openModal() {
     const modal = ensureModal();
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
+    modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
 
@@ -786,8 +979,7 @@ function initSignupModalGlobal() {
   function closeModal() {
     const modal = document.getElementById(modalId);
     if (!modal) return;
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
+    modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
   }
@@ -797,11 +989,11 @@ function initSignupModalGlobal() {
     if (!el) return;
     if (!message) {
       el.textContent = "";
-      el.classList.add("hidden");
+      el.classList.add("is-hidden");
       return;
     }
     el.textContent = message;
-    el.classList.remove("hidden");
+    el.classList.remove("is-hidden");
   }
 
   function clearErrors(root) {
@@ -834,20 +1026,10 @@ function initSignupModalGlobal() {
       if (!studentWrap) return;
       if (isStudent) {
         studentWrap.setAttribute("aria-hidden", "false");
-        studentWrap.classList.remove("max-h-0", "opacity-0", "-translate-y-1");
-        studentWrap.classList.add(
-          "max-h-[520px]",
-          "opacity-100",
-          "translate-y-0"
-        );
+        studentWrap.classList.add("is-open");
       } else {
         studentWrap.setAttribute("aria-hidden", "true");
-        studentWrap.classList.add("max-h-0", "opacity-0", "-translate-y-1");
-        studentWrap.classList.remove(
-          "max-h-[520px]",
-          "opacity-100",
-          "translate-y-0"
-        );
+        studentWrap.classList.remove("is-open");
       }
     }
 
@@ -1064,16 +1246,10 @@ function initAuthPage() {
     if (!studentFields) return;
     if (isStudent) {
       studentFields.setAttribute("aria-hidden", "false");
-      studentFields.classList.remove("max-h-0", "opacity-0", "-translate-y-1");
-      studentFields.classList.add("max-h-[420px]", "opacity-100", "translate-y-0");
+      studentFields.classList.add("is-open");
     } else {
       studentFields.setAttribute("aria-hidden", "true");
-      studentFields.classList.add("max-h-0", "opacity-0", "-translate-y-1");
-      studentFields.classList.remove(
-        "max-h-[420px]",
-        "opacity-100",
-        "translate-y-0"
-      );
+      studentFields.classList.remove("is-open");
     }
   }
 
@@ -1082,11 +1258,11 @@ function initAuthPage() {
     if (!el) return;
     if (!message) {
       el.textContent = "";
-      el.classList.add("hidden");
+      el.classList.add("is-hidden");
       return;
     }
     el.textContent = message;
-    el.classList.remove("hidden");
+    el.classList.remove("is-hidden");
   }
 
   function clearErrors() {
@@ -1124,7 +1300,7 @@ function initAuthPage() {
   if (!form) return;
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (success) success.classList.add("hidden");
+    if (success) success.classList.add("is-hidden");
 
     clearErrors();
     let ok = true;
@@ -1203,7 +1379,7 @@ function initAuthPage() {
 
     window.dispatchEvent(new Event(USER_UPDATED_EVENT));
 
-    if (success) success.classList.remove("hidden");
+    if (success) success.classList.remove("is-hidden");
     showMiniToast("Profile saved (demo)");
     form.reset();
     setStudentVisibility(false);
@@ -1213,32 +1389,23 @@ function initAuthPage() {
 // Render helpers
 function createMenuCard(item) {
   const wrapper = document.createElement("article");
-  wrapper.className =
-    "group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md";
+  wrapper.className = "menu-card";
   wrapper.innerHTML = `
-    <div class="relative h-40 overflow-hidden bg-zinc-100">
-      <img src="${item.image}" alt="${item.name}" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-      <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent"></div>
-      <div class="absolute bottom-2 left-2 flex items-center gap-2 text-[11px] font-medium text-zinc-100">
-        <span class="rounded-full bg-black/40 px-2 py-0.5">${formatCurrency(
-          item.price
-        )}</span>
+    <div class="menu-card__image-wrap">
+      <img src="${item.image}" alt="${item.name}" />
+      <div class="menu-card__gradient"></div>
+      <div class="menu-card__price-tag">
+        <span class="menu-card__price-pill">${formatCurrency(item.price)}</span>
       </div>
     </div>
-    <div class="flex flex-1 flex-col gap-2 p-3.5">
+    <div class="menu-card__body">
       <div>
-        <h3 class="text-sm font-semibold text-accent">${item.name}</h3>
-        <p class="mt-1 text-xs text-zinc-600">${item.description}</p>
+        <h3 class="menu-card__title">${item.name}</h3>
+        <p class="menu-card__desc">${item.description}</p>
       </div>
-      <div class="mt-auto flex items-center justify-between pt-1">
-        <p class="text-sm font-semibold text-primary">${formatCurrency(
-          item.price
-        )}</p>
-        <button
-          type="button"
-          data-add-to-cart="${item.id}"
-          class="inline-flex items-center justify-center rounded-full bg-primary px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition hover:bg-emerald-900"
-        >
+      <div class="menu-card__footer">
+        <p class="menu-card__price">${formatCurrency(item.price)}</p>
+        <button type="button" data-add-to-cart="${item.id}" class="btn-add-cart">
           Add to Cart
         </button>
       </div>
@@ -1345,29 +1512,22 @@ function initHomePage() {
   if (snacksRoot) {
     MENU_DATA.snacks.slice(0, 4).forEach((item) => {
       const card = document.createElement("article");
-      card.className =
-        "group flex cursor-pointer flex-col rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md";
+      card.className = "snack-card";
       card.innerHTML = `
-        <div class="flex items-start gap-3">
-          <div class="h-14 w-14 overflow-hidden rounded-xl bg-zinc-100">
-            <img src="${item.image}" alt="${item.name}" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+        <div class="snack-card__row">
+          <div class="snack-card__thumb">
+            <img src="${item.image}" alt="${item.name}" />
           </div>
-          <div class="flex-1 space-y-1">
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="text-xs font-semibold text-accent">${item.name}</h3>
-              <span class="text-xs font-semibold text-primary">${formatCurrency(
-                item.price
-              )}</span>
+          <div class="snack-card__info">
+            <div class="snack-card__head">
+              <h3 class="snack-card__name">${item.name}</h3>
+              <span class="snack-card__price">${formatCurrency(item.price)}</span>
             </div>
-            <p class="text-[11px] text-zinc-600">${item.description}</p>
+            <p class="snack-card__desc">${item.description}</p>
           </div>
         </div>
-        <div class="mt-2 flex justify-end">
-          <button
-            type="button"
-            data-add-to-cart="${item.id}"
-            class="inline-flex items-center justify-center rounded-full bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary hover:bg-primary/10"
-          >
+        <div class="snack-card__actions">
+          <button type="button" data-add-to-cart="${item.id}" class="btn-add-snack">
             Add
           </button>
         </div>
@@ -1478,42 +1638,29 @@ function renderCartPage() {
     const cart = readCart();
     cartItemsRoot.innerHTML = "";
     if (!cart.length) {
-      emptyState.classList.remove("hidden");
+      emptyState.classList.remove("is-hidden");
       if (checkoutOpen) checkoutOpen.disabled = true;
     } else {
-      emptyState.classList.add("hidden");
+      emptyState.classList.add("is-hidden");
       cart.forEach((item) => {
         const row = document.createElement("div");
-        row.className =
-          "flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs";
+        row.className = "cart-line";
         row.innerHTML = `
-          <div class="flex flex-1 items-center gap-3">
-            <div class="flex flex-col">
-              <span class="font-medium text-accent">${item.name}</span>
-              <span class="mt-0.5 text-[11px] text-zinc-500">${formatCurrency(
-                item.price
-              )} each</span>
+          <div class="cart-line__main">
+            <div class="cart-line__info">
+              <span class="cart-line__name">${item.name}</span>
+              <span class="cart-line__meta">${formatCurrency(item.price)} each</span>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-1.5 py-0.5">
-              <button type="button" data-cart-dec="${
-                item.id
-              }" class="h-5 w-5 rounded-full text-zinc-500 hover:bg-zinc-100 flex items-center justify-center">-</button>
-              <span class="min-w-[1.5rem] text-center text-[11px] font-medium text-accent">${
-                item.quantity
-              }</span>
-              <button type="button" data-cart-inc="${
-                item.id
-              }" class="h-5 w-5 rounded-full text-zinc-500 hover:bg-zinc-100 flex items-center justify-center">+</button>
+          <div class="cart-line__side">
+            <div class="cart-qty">
+              <button type="button" data-cart-dec="${item.id}" class="btn-qty" aria-label="Decrease">-</button>
+              <span class="cart-qty__num">${item.quantity}</span>
+              <button type="button" data-cart-inc="${item.id}" class="btn-qty" aria-label="Increase">+</button>
             </div>
-            <div class="text-right">
-              <p class="text-xs font-semibold text-accent">${formatCurrency(
-                item.price * item.quantity
-              )}</p>
-              <button type="button" data-cart-remove="${
-                item.id
-              }" class="mt-0.5 text-[10px] text-zinc-500 hover:text-primary">
+            <div class="cart-line__total">
+              <p class="cart-line__price">${formatCurrency(item.price * item.quantity)}</p>
+              <button type="button" data-cart-remove="${item.id}" class="btn-remove-line">
                 Remove
               </button>
             </div>
@@ -1607,7 +1754,7 @@ function renderCartPage() {
       if (msg) {
         msg.textContent =
           "No saved profile found. Please complete login/registration before checkout.";
-        msg.classList.remove("hidden");
+        msg.classList.remove("is-hidden");
       }
       showMiniToast("Please log in / register first");
       return;
@@ -1617,13 +1764,13 @@ function renderCartPage() {
       if (msg) {
         msg.textContent =
           "No email found in saved profile. Please login/register again.";
-        msg.classList.remove("hidden");
+        msg.classList.remove("is-hidden");
       }
       showMiniToast("Please login/register again");
       return;
     }
 
-    if (msg) msg.classList.add("hidden");
+    if (msg) msg.classList.add("is-hidden");
 
     if (nameEl) nameEl.value = profile.fullName || "";
     if (emailEl) emailEl.value = profile.email || "";
@@ -1638,25 +1785,21 @@ function renderCartPage() {
       const cart = readCart();
       if (!cart.length) {
         const empty = document.createElement("p");
-        empty.className = "text-[11px] text-zinc-500";
+        empty.className = "text-muted";
+        empty.style.fontSize = "11px";
         empty.textContent = "Your cart is empty.";
         checkoutItems.appendChild(empty);
         checkoutTotal.textContent = formatCurrency(0);
       } else {
         cart.forEach((item) => {
           const row = document.createElement("div");
-          row.className =
-            "flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]";
+          row.className = "checkout-line";
           row.innerHTML = `
-            <div class="flex-1">
-              <p class="text-xs font-medium text-zinc-900">${item.name}</p>
-              <p class="text-[11px] text-zinc-500">Qty: ${
-                item.quantity
-              } × ${formatCurrency(item.price)}</p>
+            <div class="checkout-line__main">
+              <p class="checkout-line__name">${item.name}</p>
+              <p class="checkout-line__meta">Qty: ${item.quantity} × ${formatCurrency(item.price)}</p>
             </div>
-            <p class="text-xs font-semibold text-zinc-900">${formatCurrency(
-              item.price * (item.quantity || 0)
-            )}</p>
+            <p class="checkout-line__total">${formatCurrency(item.price * (item.quantity || 0))}</p>
           `;
           checkoutItems.appendChild(row);
         });
@@ -1665,15 +1808,15 @@ function renderCartPage() {
       }
     }
 
-    checkoutModal.classList.remove("hidden");
-    checkoutModal.classList.add("flex");
+    checkoutModal.classList.add("is-open");
+    checkoutModal.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
   }
 
   function closeCheckout() {
     if (!checkoutModal) return;
-    checkoutModal.classList.add("hidden");
-    checkoutModal.classList.remove("flex");
+    checkoutModal.classList.remove("is-open");
+    checkoutModal.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
   }
 
@@ -1697,8 +1840,23 @@ function renderCartPage() {
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      showMiniToast("Order confirmed (demo)");
+      const cart = readCart();
+      if (!cart.length) {
+        showMiniToast("Your cart is empty");
+        return;
+      }
+      const emailKey = getUserEmailKeyForOrders();
+      if (!emailKey) {
+        showMiniToast("Please log in with a saved email to place an order");
+        return;
+      }
+      const orderRecord = buildOrderRecordFromCart(cart);
+      appendOrderForCurrentUser(orderRecord);
+      writeCart([]);
+      updateCartBadges();
       closeCheckout();
+      refresh();
+      showMiniToast("Order confirmed!");
     });
   }
 
@@ -1708,6 +1866,9 @@ function renderCartPage() {
 // Keep header badge in sync when cart changes in another tab
 window.addEventListener("storage", (e) => {
   if (e.key === CART_KEY) updateCartBadges();
+  if (e.key === ORDERS_KEY) {
+    window.dispatchEvent(new Event(ORDER_HISTORY_UPDATED_EVENT));
+  }
 });
 
 document.addEventListener("DOMContentLoaded", () => {

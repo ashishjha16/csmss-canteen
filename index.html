@@ -5,88 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="logo.png" />
     <title>CSMSS Canteen | Home</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: "#12422e",
-              accent: "#3f3f46",
-            },
-          },
-        },
-      };
-    </script>
+    <link rel="stylesheet" href="style.css" />
   </head>
-      <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
-    authDomain: "csmss-canteen-96d28.firebaseapp.com",
-    projectId: "csmss-canteen-96d28",
-    storageBucket: "csmss-canteen-96d28.firebasestorage.app",
-    messagingSenderId: "541374142906",
-    appId: "1:541374142906:web:8112606f02edbd6eada583",
-    measurementId: "G-JBD9TPTXET"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-  <body
-    class="min-h-screen bg-[#e5e9e6] text-white flex flex-col"
-    data-page="home"
-  >
-    <!-- Navbar -->
-    <header
-      class="sticky top-0 z-50 border-b border-[#0f5a3b] bg-[#12422e]/95 backdrop-blur"
-    >
-      <nav
-        class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6 lg:px-8"
-      >
-        <a href="index.html" class="flex items-center gap-3">
-          <div class="logo-container mr-3 flex items-center">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
+      authDomain: "csmss-canteen-96d28.firebaseapp.com",
+      projectId: "csmss-canteen-96d28",
+      storageBucket: "csmss-canteen-96d28.firebasestorage.app",
+      messagingSenderId: "541374142906",
+      appId: "1:541374142906:web:8112606f02edbd6eada583",
+      measurementId: "G-JBD9TPTXET",
+    };
+    const app = initializeApp(firebaseConfig);
+    getAnalytics(app);
+  </script>
+  <body class="page page--bg-mint" data-page="home">
+    <header class="site-header site-header--dark">
+      <nav class="site-nav">
+        <a href="index.html" class="nav-brand">
+          <div class="nav-brand__logo-wrap">
             <img
-              src="images/logo.png" 
+              src="images/logo.png"
               alt="CanteenCo Logo"
-              class="logo h-9 w-auto md:h-12"
+              class="logo-img"
             />
           </div>
-          <div class="flex flex-col leading-tight text-[#c9a24b]">
-            <span class="font-semibold tracking-tight">CSMSS Canteen</span>
-            <span class="text-xs font-semibold text-[#c9a24b] hidden sm:inline">
-              Fresh • Hygienic • Affordable
-            </span>
+          <div class="nav-brand__text nav-brand__text--gold">
+            <span class="nav-brand__title">CSMSS Canteen</span>
+            <span class="nav-brand__tagline">Fresh • Hygienic • Affordable</span>
           </div>
         </a>
 
-        <div class="flex items-center gap-1 md:gap-6">
-          <div class="hidden items-center gap-6 text-sm md:flex text-[#c9a24b]">
-            <a href="index.html" class="font-medium text-[#c9a24b]">Home</a>
-            <a href="menu.html" class="font-medium text-[#c9a24b]">Menu</a>
+        <div class="nav-actions" data-header-actions>
+          <div class="nav-links-desktop nav-links-desktop--gold">
+            <a href="index.html">Home</a>
+            <a href="menu.html">Menu</a>
           </div>
 
-          <a
-            href="cart.html"
-            class="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-[#c9a24b] transition duration-200 hover:scale-105 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c9a24b]"
-            aria-label="Shopping cart"
-          >
+          <a href="cart.html" class="cart-icon-btn" aria-label="Shopping cart">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="h-6 w-6"
+              class="icon"
               aria-hidden="true"
             >
               <path
@@ -95,235 +61,128 @@
                 d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218a1.5 1.5 0 001.45-1.12l.729-2.7A1.5 1.5 0 0014.25 6H4.5a1.5 1.5 0 00-1.5 1.5v6.75a1.5 1.5 0 002.25 1.5z"
               />
             </svg>
-            <span
-              data-cart-quantity
-              class="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold leading-none text-white shadow-sm"
-              >0</span
-            >
+            <span data-cart-quantity class="cart-badge">0</span>
           </a>
 
-            <!-- Mobile menu button -->
-            <button
-              id="mobile-menu-toggle"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:border-primary hover:text-primary md:hidden"
-              aria-label="Toggle navigation"
+          <button
+            type="button"
+            id="mobile-menu-toggle"
+            class="nav-menu-toggle"
+            aria-label="Toggle navigation"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="icon--sm"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
       </nav>
 
-      <!-- Mobile menu -->
-      <div
-        id="mobile-menu"
-        class="hidden border-t border-[#0f5a3b] bg-[#12422e] md:hidden"
-      >
-        <div class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 text-sm text-white">
-          <a href="index.html" class="rounded-md bg-white/10 px-3 py-2 text-white"
-            >Home</a
-          >
-          <a
-            href="menu.html"
-            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
-            >Menu</a
-          >
-          <a
-            href="order.html"
-            class="rounded-md px-3 py-2 text-white/80 hover:bg-white/10"
-            >Order</a
-          >
-          <a
-            href="cart.html"
-            class="mt-1 inline-flex items-center justify-between rounded-md border border-transparent bg-[#1f6f4a] px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#0f5a3b]"
-          >
+      <div id="mobile-menu" class="is-hidden">
+        <div class="mobile-menu-inner">
+          <a href="index.html" class="mobile-menu-link mobile-menu-link--active">Home</a>
+          <a href="menu.html" class="mobile-menu-link">Menu</a>
+          <a href="order.html" class="mobile-menu-link">Order</a>
+          <a href="cart.html" class="mobile-menu-cart">
             <span>Cart</span>
-            <span
-              id="mobile-cart-count"
-              class="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white"
-              >0</span
-            >
+            <span id="mobile-cart-count" class="mobile-menu-cart-count">0</span>
           </a>
         </div>
       </div>
     </header>
 
-    <main class="flex-1">
-      <!-- Hero -->
-      <section class="relative border-b border-[#0f5a3b]">
+    <main class="main-content">
+      <section class="hero-section" data-hero-parallax="true">
+        <div class="hero-bg">
+          <img src="images/banner.jpeg" alt="" data-hero-bg="true" />
+        </div>
+        <div class="hero-overlay" aria-hidden="true"></div>
 
-  <!-- Background Banner -->
-  <div class="absolute inset-0">
-    <img src="images/banner.jpeg" 
-         class="w-full h-full object-cover">
-  </div>
-
-  <!-- Dark Overlay -->
-  <div class="absolute inset-0 bg-black/50"></div>
-
-  <!-- Hero Content -->
-  
-
-        <div
-          class="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 py-12 md:flex-row md:items-center md:py-16 lg:px-8"
-        >
-          <div class="relative z-10 max-w-xl space-y-6 text-white">
-            <p
-              class="inline-flex items-center rounded-full border border-white/10 bg-[#12422e]/5 px-3 py-1 text-xs font-medium text-zinc-200 backdrop-blur"
-            >
-              Fresh, Hygienic &amp; Affordable
-            </p>
-            <h1
-              class="text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl"
-            >
-              CSMSS Canteen
-            </h1>
-            <p class="text-sm text-zinc-300 sm:text-base">
+        <div class="hero-inner">
+          <div class="hero-content">
+            <p class="hero-badge">Fresh, Hygienic &amp; Affordable</p>
+            <h1 class="hero-title">CSMSS Canteen</h1>
+            <p class="hero-lead">
               Freshly prepared, hygienic and pocket-friendly meals made
               exclusively for students of CSMSS Chh. Shahu College of
               Engineering.
             </p>
-            <div class="flex flex-wrap items-center gap-3">
-              <a
-                href="menu.html"
-                class="inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-emerald-900/30 transition hover:-translate-y-0.5 hover:bg-emerald-900"
-              >
-                View Menu
-              </a>
-              <a
-                href="cart.html"
-                class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-100 backdrop-blur transition hover:bg-white/10"
-              >
-                View Cart / Checkout
-              </a>
+            <div class="hero-actions">
+              <a href="menu.html" class="btn btn--primary">View Menu</a>
+              <a href="cart.html" class="btn btn--ghost-light">View Cart / Checkout</a>
             </div>
           </div>
-          </div>
         </div>
       </section>
 
-      
-
-      <!-- Today's Specials -->
-      <section class="py-10 md:py-12">
-        <div class="mx-auto max-w-6xl px-4 lg:px-8">
-          <div
-            class="flex flex-wrap items-center justify-between gap-4 pb-5 md:pb-6"
-          >
-            <h2 class="text-xl font-semibold tracking-tight text-[#12422e]">
-              Today's Special Items
-            </h2>
-            <a
-              href="menu.html"
-              class="text-xs font-medium text-primary hover:underline"
-              >View full menu</a
-            >
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <h2 class="section-title">Today's Special Items</h2>
+            <a href="menu.html" class="section-link">View full menu</a>
           </div>
-
-          <div
-            class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            id="home-specials"
-          >
-            <!-- Populated via JavaScript from shared menu data -->
-          </div>
+          <div class="grid-cards grid-cards--2 grid-cards--3" id="home-specials"></div>
         </div>
       </section>
 
-      <!-- Popular Snacks -->
-      <section class="py-10 md:py-12">
-        <div class="mx-auto max-w-6xl px-4 lg:px-8">
-          <h2 class="text-xl font-semibold tracking-tight text-[#12422e]">
-            Popular Snacks
-          </h2>
-          <p class="mt-1 text-sm text-[#12422e]/80">
-            Quick bites that students love between lectures.
-          </p>
-
-          <div
-            class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            id="home-snacks"
-          >
-            <!-- Populated via JavaScript -->
-          </div>
+      <section class="section section--snacks">
+        <div class="container">
+          <h2 class="section-title">Popular Snacks</h2>
+          <p class="section-sub">Quick bites that students love between lectures.</p>
+          <div class="grid-cards grid-cards--2 grid-cards--4" style="margin-top: 1.5rem" id="home-snacks"></div>
         </div>
       </section>
 
-      <!-- Student Feedback -->
-      <section class="py-10 md:py-12">
-        <div class="mx-auto max-w-6xl px-4 lg:px-8">
-          <div
-            class="flex flex-wrap items-center justify-between gap-4 pb-5 md:pb-6"
-          >
-            <h2 class="text-xl font-semibold tracking-tight text-white">
-              Student Feedback
-            </h2>
-            <p class="text-xs text-zinc-500">
-              Real experiences from CSMSS students.
-            </p>
+      <section class="section section--feedback">
+        <div class="container">
+          <div class="section-head">
+            <h2 class="section-title section-title--white">Student Feedback</h2>
+            <p class="section-note">Real experiences from CSMSS students.</p>
           </div>
-
-          <div class="grid gap-4 md:grid-cols-3">
-            <article
-              class="flex h-full flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm shadow-sm"
-            >
-              <p class="text-zinc-700">
+          <div class="grid-feedback">
+            <article class="feedback-card">
+              <p>
                 "The canteen is my go-to place after labs. The meals are
                 filling and the prices are perfect for students."
               </p>
-              <div class="mt-4 flex items-center justify-between">
+              <div class="feedback-card__meta">
                 <div>
-                  <p class="text-xs font-semibold text-accent">
-                    Ananya, 3rd Year CSE
-                  </p>
-                  <p class="text-[11px] text-zinc-500">Regular Visitor</p>
+                  <p class="feedback-name">Ananya, 3rd Year CSE</p>
+                  <p class="feedback-role">Regular Visitor</p>
                 </div>
-                <p class="text-xs font-semibold text-primary">4.6 / 5</p>
+                <p class="feedback-score">4.6 / 5</p>
               </div>
             </article>
-
-            <article
-              class="flex h-full flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm shadow-sm"
-            >
-              <p class="text-zinc-700">
+            <article class="feedback-card">
+              <p>
                 "The online ordering is super convenient. I can quickly pick up
                 my food during short breaks."
               </p>
-              <div class="mt-4 flex items-center justify-between">
+              <div class="feedback-card__meta">
                 <div>
-                  <p class="text-xs font-semibold text-accent">
-                    Aditya, 2nd Year Mechanical
-                  </p>
-                  <p class="text-[11px] text-zinc-500">
-                    Prefers Grab-&amp;-Go
-                  </p>
+                  <p class="feedback-name">Aditya, 2nd Year Mechanical</p>
+                  <p class="feedback-role">Prefers Grab-&amp;-Go</p>
                 </div>
-                <p class="text-xs font-semibold text-primary">4.7 / 5</p>
+                <p class="feedback-score">4.7 / 5</p>
               </div>
             </article>
-
-            <article
-              class="flex h-full flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm shadow-sm"
-            >
-              <p class="text-zinc-700">
+            <article class="feedback-card">
+              <p>
                 "Plenty of options for both light snacks and proper meals. The
                 hygiene standards are impressive."
               </p>
-              <div class="mt-4 flex items-center justify-between">
+              <div class="feedback-card__meta">
                 <div>
-                  <p class="text-xs font-semibold text-accent">
-                    Priya, 4th Year E&amp;TC
-                  </p>
-                  <p class="text-[11px] text-zinc-500">Health Conscious</p>
+                  <p class="feedback-name">Priya, 4th Year E&amp;TC</p>
+                  <p class="feedback-role">Health Conscious</p>
                 </div>
-                <p class="text-xs font-semibold text-primary">4.8 / 5</p>
+                <p class="feedback-score">4.8 / 5</p>
               </div>
             </article>
           </div>
@@ -331,72 +190,49 @@
       </section>
     </main>
 
-    <!-- Footer -->
-<footer class="bg-[#12422e] text-white mt-10">
-  <div class="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-4 gap-8">
-
-    <!-- About -->
-    <div>
-      <h2 class="text-lg font-semibold text-[#c9a24b]">CSMSS Canteen</h2>
-      <p class="text-sm text-zinc-300 mt-2">
-        Fresh, hygienic & affordable meals made specially for students.
-      </p>
-      <p class="text-sm text-zinc-400 mt-2">
-        Mon – Sat: 8:00 AM – 6:00 PM
-      </p>
-    </div>
-
-    <!-- Contact -->
-    <div>
-      <h2 class="text-lg font-semibold text-[#c9a24b]">Contact</h2>
-      <p class="text-sm mt-2 text-zinc-300">📍 CSMSS Campus</p>
-    </div>
-
-    <!-- Quick Links -->
-    <div>
-      <h2 class="text-lg font-semibold text-[#c9a24b]">Quick Links</h2>
-      <ul class="mt-2 space-y-2 text-sm text-zinc-300">
-        <li><a href="index.html" class="hover:text-[#4ade80]">Home</a></li>
-        <li><a href="menu.html" class="hover:text-[#4ade80]">Menu</a></li>
-        <li><a href="cart.html" class="hover:text-[#4ade80]">Cart</a></li>
-      </ul>
-    </div>
-
-    <!-- Social -->
-    <div>
-      <h2 class="text-lg font-semibold text-[#c9a24b]">Follow Us</h2>
-      <div class="flex gap-4 mt-3">
-
-        <!-- Instagram -->
-        <a href="#" class="hover:scale-110 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-            stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="4"></rect>
-            <circle cx="12" cy="12" r="4"></circle>
-            <line x1="17.5" y1="6.5" x2="17.5" y2="6.5"></line>
-          </svg>
-        </a>
-
-        <!-- Facebook -->
-        <a href="#" class="hover:scale-110 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor">
-            <path d="M13 10.5V7.75C13 6.784 13.784 6 14.75 6H16V3H14.5C11.738 3 9.5 5.238 9.5 8V10.5H7V14H9.5V21H13V14H15.5L16 10.5H13Z"/>
-          </svg>
-        </a>
-
+    <footer class="site-footer">
+      <div class="site-footer__grid">
+        <div>
+          <h2>CSMSS Canteen</h2>
+          <p>Fresh, hygienic &amp; affordable meals made specially for students.</p>
+          <p>Mon – Sat: 8:00 AM – 6:00 PM</p>
+        </div>
+        <div>
+          <h2>Contact</h2>
+          <p>📍 CSMSS Campus</p>
+        </div>
+        <div>
+          <h2>Quick Links</h2>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="menu.html">Menu</a></li>
+            <li><a href="cart.html">Cart</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Follow Us</h2>
+          <div class="social-row">
+            <a href="#" aria-label="Instagram">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon--sm" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+                <circle cx="12" cy="12" r="4"></circle>
+                <line x1="17.5" y1="6.5" x2="17.5" y2="6.5"></line>
+              </svg>
+            </a>
+            <a href="#" aria-label="Facebook">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon--sm" fill="currentColor">
+                <path d="M13 10.5V7.75C13 6.784 13.784 6 14.75 6H16V3H14.5C11.738 3 9.5 5.238 9.5 8V10.5H7V14H9.5V21H13V14H15.5L16 10.5H13Z" />
+              </svg>
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
-
-  </div>
-
-  <!-- Bottom -->
-  <div class="border-t border-white/20 text-center text-sm text-zinc-300 py-4">
-    © 2026 CSMSS Canteen. All rights reserved. <br />
-    Built with ❤️ by Ashish
-  </div>
-</footer>
+      <div class="site-footer__bottom">
+        © 2026 CSMSS Canteen. All rights reserved. <br />
+        Built with ❤️ by Ashish
+      </div>
+    </footer>
 
     <script src="script.js" defer></script>
   </body>
 </html>
-
