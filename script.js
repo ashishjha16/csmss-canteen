@@ -155,7 +155,7 @@ const MENU_DATA = {
       price: 45,
       description: "Crispy dosa filled with spiced potato masala.",
       image:
-        "https://images.pexels.com/photos/14372692/pexels-photo-14372692.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/masala dosa.jpg",
     },
     {
       id: "poha",
@@ -207,7 +207,7 @@ const MENU_DATA = {
       price: 80,
       description: "Rice, chapati, dal, sabzi, salad & pickle.",
       image:
-        "https://images.pexels.com/photos/4109990/pexels-photo-4109990.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/vegthali.png",
     },
     {
       id: "paneer-thali",
@@ -254,13 +254,119 @@ const MENU_DATA = {
   ],
 };
 
+const NON_VEG_ITEMS = [
+  {
+    id: "chicken-roll",
+    name: "Chicken Roll",
+    price: 90,
+    description: "Juicy chicken wrapped with fresh veggies in a soft roll.",
+    image:
+      "https://images.pexels.com/photos/4958792/pexels-photo-4958792.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    id: "chicken-burger",
+    name: "Chicken Burger",
+    price: 110,
+    description: "Crispy chicken patty burger with lettuce and mayo.",
+    image:
+      "https://images.pexels.com/photos/1639562/pexels-photo-1639562.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    id: "egg-sandwich",
+    name: "Egg Sandwich",
+    price: 55,
+    description: "Toasted sandwich filled with spiced egg and fresh greens.",
+    image:
+      "https://images.pexels.com/photos/4109996/pexels-photo-4109996.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    id: "chicken-sandwich",
+    name: "Chicken Sandwich",
+    price: 85,
+    description: "Grilled chicken sandwich with creamy dressing.",
+    image:
+      "https://images.pexels.com/photos/1600727/pexels-photo-1600727.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    id: "bread-omelette",
+    name: "Bread Omelette",
+    price: 40,
+    description: "Classic college favorite with masala omelette and bread.",
+    image:
+      "https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+];
+
+const CATEGORY_NAV = [
+  {
+    key: "vegetarian",
+    title: "Vegetarian",
+    href: "vegetarian.html",
+    image:
+      "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    key: "nonveg",
+    title: "Non Veg",
+    href: "nonveg.html",
+    image:
+      "https://images.pexels.com/photos/616354/pexels-photo-616354.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    key: "beverages",
+    title: "Beverages",
+    href: "beverages.html",
+    image:
+      "https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    key: "breakfast",
+    title: "Breakfast",
+    href: "breakfast.html",
+    image:
+      "https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+];
+
 // Expose flattened list for suggestions
 const ALL_ITEMS = [
   ...MENU_DATA.breakfast,
   ...MENU_DATA.snacks,
   ...MENU_DATA.lunch,
   ...MENU_DATA.beverages,
+  ...NON_VEG_ITEMS,
 ];
+
+function getItemsByCategoryKey(categoryKey) {
+  if (categoryKey === "breakfast") return MENU_DATA.breakfast;
+  if (categoryKey === "beverages") return MENU_DATA.beverages;
+  if (categoryKey === "nonveg") return NON_VEG_ITEMS;
+  if (categoryKey === "vegetarian") {
+    return [...MENU_DATA.snacks, ...MENU_DATA.lunch, MENU_DATA.breakfast[1]].filter(
+      Boolean
+    );
+  }
+  return [];
+}
+
+function renderCategoryNavCards(root) {
+  if (!root) return;
+  root.innerHTML = "";
+  CATEGORY_NAV.forEach((cat) => {
+    const card = document.createElement("a");
+    card.href = cat.href;
+    card.className = "category-nav-card";
+    card.innerHTML = `
+      <div class="category-nav-card__image">
+        <img src="${cat.image}" alt="${cat.title}" />
+      </div>
+      <div class="category-nav-card__body">
+        <h3 class="category-nav-card__title">${cat.title}</h3>
+      </div>
+    `;
+    root.appendChild(card);
+  });
+}
 
 function addToCart(itemId) {
   const item =
@@ -1444,6 +1550,7 @@ function initHeroParallax() {
 function initHomePage() {
   const specialsRoot = document.getElementById("home-specials");
   const snacksRoot = document.getElementById("home-snacks");
+  const categoryRoot = document.getElementById("home-category-nav");
   if (specialsRoot) {
     const specials = [
       MENU_DATA.breakfast[1],
@@ -1481,10 +1588,14 @@ function initHomePage() {
       snacksRoot.appendChild(card);
     });
   }
+  if (categoryRoot) {
+    renderCategoryNavCards(categoryRoot);
+  }
   bindMenuButtons(document);
 }
 
 function initMenuPage() {
+  const categoryRoot = document.getElementById("menu-category-nav");
   const map = {
     breakfast: "menu-breakfast",
     snacks: "menu-snacks",
@@ -1498,6 +1609,19 @@ function initMenuPage() {
       const card = createMenuCard(item);
       root.appendChild(card);
     });
+  });
+  if (categoryRoot) {
+    renderCategoryNavCards(categoryRoot);
+  }
+  bindMenuButtons(document);
+}
+
+function initCategoryPage(categoryKey) {
+  const listRoot = document.getElementById("category-items");
+  if (!listRoot) return;
+  listRoot.innerHTML = "";
+  getItemsByCategoryKey(categoryKey).forEach((item) => {
+    listRoot.appendChild(createMenuCard(item));
   });
   bindMenuButtons(document);
 }
@@ -1832,6 +1956,10 @@ document.addEventListener("DOMContentLoaded", () => {
     initHomePage();
   }
   if (page === "menu") initMenuPage();
+  if (page === "vegetarian") initCategoryPage("vegetarian");
+  if (page === "nonveg") initCategoryPage("nonveg");
+  if (page === "beverages") initCategoryPage("beverages");
+  if (page === "breakfast") initCategoryPage("breakfast");
   if (page === "order-history") initOrderHistoryPage();
   if (page === "cart") renderCartPage();
   if (page === "auth") initAuthPage();
