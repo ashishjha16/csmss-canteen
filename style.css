@@ -227,14 +227,6 @@ button {
   color: var(--color-zinc-500);
 }
 
-.nav-brand__text--order .nav-brand__title {
-  color: var(--color-white);
-}
-
-.nav-brand__text--order .nav-brand__tagline {
-  color: rgba(255, 255, 255, 0.7);
-}
-
 /* Header actions cluster */
 .nav-actions {
   display: flex;
@@ -1747,116 +1739,6 @@ button {
   text-align: center;
   font-size: 11px;
   color: var(--color-zinc-500);
-}
-
-/* ---------- Order page form ---------- */
-.order-section {
-  max-width: var(--max-w-3xl);
-  margin: 0 auto;
-  padding: 2.5rem 1rem;
-}
-
-@media (min-width: 1024px) {
-  .order-section {
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
-
-.order-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  border-radius: var(--radius-2xl);
-  border: 1px solid var(--color-zinc-200);
-  background: var(--color-white);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.order-form-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .order-form-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.order-form-grid--split {
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 768px) {
-  .order-form-grid--split {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.order-field label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-zinc-700);
-}
-
-.order-input {
-  margin-top: 0.25rem;
-  width: 100%;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-zinc-200);
-  background: #f5f5f5;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  color: var(--color-accent);
-  outline: none;
-}
-
-.order-input:focus {
-  background: var(--color-white);
-  box-shadow: 0 0 0 2px rgba(18, 66, 46, 0.25);
-}
-
-.order-form__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  border-top: 1px dashed var(--color-zinc-200);
-  padding-top: 1rem;
-  color: var(--color-accent);
-}
-
-.order-success-msg {
-  margin-top: 1rem;
-  border-radius: var(--radius-xl);
-  border: 1px solid #a7f3d0;
-  background: #ecfdf5;
-  padding: 0.75rem 1rem;
-  font-size: 0.75rem;
-  color: #065f46;
-}
-
-.btn-order {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: var(--color-primary-mid);
-  padding: 0.625rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-white);
-  border: none;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.15s, background 0.15s;
-}
-
-.btn-order:hover {
-  transform: translateY(-2px);
-  background: var(--color-primary-hover);
 }
 
 /* ---------- Footer (main site) ---------- */

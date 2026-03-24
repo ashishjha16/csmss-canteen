@@ -122,6 +122,7 @@ function buildOrderRecordFromCart(cart) {
     items,
     total: totals.total,
     itemCount: totals.items,
+    status: "Completed",
   };
 }
 
@@ -135,60 +136,6 @@ function formatOrderDateTime(iso) {
   } catch {
     return String(iso);
   }
-}
-
-function renderOrderHistoryInProfile(wrapper) {
-  let root = wrapper.querySelector('[data-order-history-list]');
-  if (!root) {
-    const dropdown = wrapper.querySelector('[data-profile-dropdown="true"]');
-    const inner = dropdown?.querySelector(".profile-dropdown__inner");
-    const logoutBtn = inner?.querySelector('[data-action="logout"]');
-    if (!inner || !logoutBtn) return;
-    const block = document.createElement("div");
-    block.className = "order-history-block";
-    block.innerHTML = `
-      <p class="order-history-title">Order history</p>
-      <div data-order-history-list class="order-history-list"></div>
-    `;
-    inner.insertBefore(block, logoutBtn);
-    root = block.querySelector('[data-order-history-list]');
-  }
-  if (!root) return;
-  const orders = getOrdersForCurrentUser();
-  if (!orders.length) {
-    root.innerHTML = '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">No orders yet.</p>';
-    return;
-  }
-  root.innerHTML = orders
-    .map(
-      (order) => `
-    <div class="order-history-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
-        <p style="margin:0;font-size:11px;font-weight:600;color:var(--color-zinc-900)">${escapeHtml(order.id)}</p>
-        <p style="margin:0;font-size:10px;color:var(--color-zinc-500);white-space:nowrap">${escapeHtml(
-          formatOrderDateTime(order.createdAt)
-        )}</p>
-      </div>
-      <ul style="margin:0.5rem 0 0;padding:0;list-style:none;font-size:11px;color:var(--color-zinc-700)">
-        ${order.items
-          .map(
-            (it) => `
-          <li style="display:flex;justify-content:space-between;gap:0.5rem">
-            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.name)} × ${escapeHtml(
-              String(it.quantity)
-            )}</span>
-            <span style="flex-shrink:0;font-weight:500">${formatCurrency(it.lineTotal)}</span>
-          </li>`
-          )
-          .join("")}
-      </ul>
-      <p style="margin:0.5rem 0 0;padding-top:0.5rem;border-top:1px solid rgba(228,228,231,0.8);font-size:11px;font-weight:600;color:var(--color-primary)">Total: ${formatCurrency(
-        order.total
-      )}</p>
-    </div>
-  `
-    )
-    .join("");
 }
 
 // Basic menu data used across pages
@@ -388,9 +335,7 @@ function initSignupModalGlobal() {
   if (!initSignupModalGlobal._orderHistoryListener) {
     initSignupModalGlobal._orderHistoryListener = true;
     window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, () => {
-      document
-        .querySelectorAll('[data-profile-wrapper="true"]')
-        .forEach((w) => renderOrderHistoryInProfile(w));
+      // History updates are consumed by dedicated Order History page.
     });
   }
 
@@ -494,7 +439,6 @@ function initSignupModalGlobal() {
     setText('[data-profile-name="true"]', user.name);
     setText('[data-profile-phone="true"]', user.phone);
     setText('[data-profile-email="true"]', user.email);
-    renderOrderHistoryInProfile(wrapper);
   }
 
   function onlyDigits(value) {
@@ -635,10 +579,9 @@ function initSignupModalGlobal() {
               </div>
             </div>
 
-            <div class="order-history-block">
-              <p class="order-history-title">Order history</p>
-              <div data-order-history-list class="order-history-list"></div>
-            </div>
+            <a href="order-history.html" class="btn-secondary" style="width:100%;text-decoration:none;justify-content:center">
+              View Order History
+            </a>
 
             <button type="button" data-action="logout" class="btn-logout">
               Logout
@@ -777,10 +720,9 @@ function initSignupModalGlobal() {
               </div>
             </div>
 
-            <div class="order-history-block">
-              <p class="order-history-title">Order history</p>
-              <div data-order-history-list class="order-history-list"></div>
-            </div>
+            <a href="order-history.html" class="btn-secondary" style="width:100%;text-decoration:none;justify-content:center">
+              View Order History
+            </a>
 
             <button type="button" data-action="logout" class="btn-logout">
               Logout
@@ -1560,76 +1502,66 @@ function initMenuPage() {
   bindMenuButtons(document);
 }
 
-function initOrderPage() {
-  const form = document.getElementById("order-form");
-  const success = document.getElementById("order-success");
-  const datalist = document.getElementById("food-suggestions");
+function initOrderHistoryPage() {
+  const listRoot = document.getElementById("order-history-list");
+  const emptyRoot = document.getElementById("order-history-empty");
+  if (!listRoot || !emptyRoot) return;
 
-  if (datalist) {
-    ALL_ITEMS.forEach((item) => {
-      const opt = document.createElement("option");
-      opt.value = item.name;
-      datalist.appendChild(opt);
+  function render() {
+    const orders = getOrdersForCurrentUser();
+    listRoot.innerHTML = "";
+
+    if (!orders.length) {
+      emptyRoot.classList.remove("is-hidden");
+      return;
+    }
+
+    emptyRoot.classList.add("is-hidden");
+    orders.forEach((order) => {
+      const itemsList = Array.isArray(order.items) ? order.items : [];
+      const status = String(order.status || "Completed");
+      const itemCount =
+        Number(order.itemCount) ||
+        itemsList.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+
+      const card = document.createElement("article");
+      card.className = "order-history-card";
+      card.innerHTML = `
+        <div class="summary-row">
+          <span style="font-weight:600;color:var(--color-zinc-900)">${escapeHtml(order.id || "")}</span>
+          <span class="text-muted" style="font-size:11px">${escapeHtml(formatOrderDateTime(order.createdAt || ""))}</span>
+        </div>
+        <div class="summary-row summary-row--small" style="margin-top:0.25rem">
+          <span>Status</span>
+          <span style="font-weight:600;color:var(--color-emerald-700)">${escapeHtml(status)}</span>
+        </div>
+        <div class="summary-row summary-row--small">
+          <span>Items</span>
+          <span>${escapeHtml(String(itemCount))}</span>
+        </div>
+        <ul style="margin:0.625rem 0 0;padding:0;list-style:none">
+          ${itemsList
+            .map(
+              (it) => `
+            <li class="summary-row summary-row--small">
+              <span>${escapeHtml(it.name || "")} × ${escapeHtml(String(Number(it.quantity) || 0))}</span>
+              <span>${formatCurrency(Number(it.lineTotal) || 0)}</span>
+            </li>
+          `
+            )
+            .join("")}
+        </ul>
+        <div class="summary-row summary-row--total">
+          <span>Total</span>
+          <span>${formatCurrency(Number(order.total) || 0)}</span>
+        </div>
+      `;
+      listRoot.appendChild(card);
     });
   }
 
-  if (!form) return;
-
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-
-    const studentName =
-      document.getElementById("student-name")?.value.trim() || "";
-    const rollNumber =
-      document.getElementById("roll-number")?.value.trim() || "";
-    const foodItem = document.getElementById("food-item")?.value.trim() || "";
-    const quantity =
-      Number(document.getElementById("quantity")?.value || 1) || 1;
-    const pickupTime =
-      document.getElementById("pickup-time")?.value.trim() || "";
-    const notes = document.getElementById("notes")?.value.trim() || "";
-
-    if (!studentName || !rollNumber || !foodItem || !pickupTime) {
-      showMiniToast("Please fill all required order details");
-      return;
-    }
-
-    const matchedItem = ALL_ITEMS.find(
-      (item) => item.name.toLowerCase() === foodItem.toLowerCase()
-    );
-
-    const orderRecord = {
-      id: `ORD-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      items: [
-        {
-          id: matchedItem?.id || foodItem.toLowerCase().replace(/\s+/g, "-"),
-          name: foodItem,
-          price: matchedItem?.price || 0,
-          quantity,
-          lineTotal: (matchedItem?.price || 0) * quantity,
-        },
-      ],
-      total: (matchedItem?.price || 0) * quantity,
-      itemCount: quantity,
-      source: "manual-order-form",
-      studentName,
-      rollNumber,
-      pickupTime,
-      notes,
-    };
-
-    const saved = appendOrderForCurrentUser(orderRecord);
-
-    if (!saved) {
-      showMiniToast("Please sign up/login first to save order history");
-      return;
-    }
-
-    if (success) success.classList.remove("is-hidden");
-    form.reset();
-    showMiniToast("Order saved successfully");
-  });
+  render();
+  window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, render);
 }
 
 function renderCartPage() {
@@ -1900,7 +1832,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initHomePage();
   }
   if (page === "menu") initMenuPage();
-  if (page === "order") initOrderPage();
+  if (page === "order-history") initOrderHistoryPage();
   if (page === "cart") renderCartPage();
   if (page === "auth") initAuthPage();
 });

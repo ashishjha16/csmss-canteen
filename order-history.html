@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="logo.png" />
-    <title>CSMSS Canteen | Menu</title>
+    <title>CSMSS Canteen | Order History</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body class="page page--bg-mint" data-page="menu">
+  <body class="page page--bg-green" data-page="order-history">
     <header class="site-header site-header--dark">
       <nav class="site-nav">
         <a href="index.html" class="nav-brand">
@@ -45,8 +45,8 @@
       <div id="mobile-menu" class="is-hidden">
         <div class="mobile-menu-inner">
           <a href="index.html" class="mobile-menu-link">Home</a>
-          <a href="menu.html" class="mobile-menu-link mobile-menu-link--active">Menu</a>
-          <a href="order-history.html" class="mobile-menu-link">Order History</a>
+          <a href="menu.html" class="mobile-menu-link">Menu</a>
+          <a href="order-history.html" class="mobile-menu-link mobile-menu-link--active">Order History</a>
           <a href="cart.html" class="mobile-menu-cart">
             <span>Cart</span>
             <span id="mobile-cart-count" class="mobile-menu-cart-count">0</span>
@@ -56,66 +56,23 @@
     </header>
 
     <main class="main-content">
-      <section class="page-banner">
+      <section class="page-banner page-banner--light">
         <div class="page-banner-inner">
           <div>
-            <h1 class="page-banner-title">Menu</h1>
-            <p class="page-banner-lead">Explore our curated selection of breakfast, snacks, lunch and beverages.</p>
-          </div>
-          <div class="page-banner-aside">
-            <span>Updated daily by canteen admin</span>
+            <h1 class="page-banner-title">Order History</h1>
+            <p class="page-banner-lead">View your completed orders from cart checkout.</p>
           </div>
         </div>
       </section>
 
-      <section class="menu-categories">
-        <div>
-          <div class="menu-category">
-            <div class="menu-category-head">
-              <h2 class="menu-category-title">Menu</h2>
-              <p class="menu-category-desc">Start your day with fresh and filling breakfast options.</p>
-            </div>
-            <div class="menu-grid" id="menu-breakfast"></div>
+      <section class="container" style="padding-top: 2.5rem; padding-bottom: 3rem">
+        <div class="card-panel">
+          <div class="card-panel__head">
+            <h2 class="card-panel__title">Completed Orders</h2>
           </div>
-
-        <div>
-          <div class="menu-category">
-            <div class="menu-category-head">
-              <h2 class="menu-category-title">Breakfast</h2>
-              <p class="menu-category-desc">Start your day with fresh and filling breakfast options.</p>
-            </div>
-            <div class="menu-grid" id="menu-breakfast"></div>
-          </div>
-
-          <div class="menu-category">
-            <div class="menu-category-head">
-              <h2 class="menu-category-title menu-category-title--on-dark">Snacks</h2>
-              <p class="menu-category-desc menu-category-desc--on-dark">Quick bites between lectures and lab sessions.</p>
-            </div>
-            <div class="menu-grid" id="menu-snacks"></div>
-          </div>
-
-          <div class="menu-category">
-            <div class="menu-category-head">
-              <h2 class="menu-category-title menu-category-title--on-dark">Lunch</h2>
-              <p class="menu-category-desc menu-category-desc--on-dark">Complete meals for a satisfying afternoon break.</p>
-            </div>
-            <div class="menu-grid" id="menu-lunch"></div>
-          </div>
-
-          <div class="menu-category">
-            <div class="menu-category-head">
-              <h2 class="menu-category-title menu-category-title--on-dark">Beverages</h2>
-              <p class="menu-category-desc menu-category-desc--on-dark">Refreshing drinks to keep you energized.</p>
-            </div>
-            <div class="menu-grid" id="menu-beverages"></div>
-          </div>
+          <div id="order-history-empty" class="cart-empty is-hidden">No order history found</div>
+          <div id="order-history-list" class="summary-rows" style="margin-top: 0.75rem"></div>
         </div>
-
-        <p class="menu-footnote">
-          * Items and prices are indicative and may vary slightly based on availability. Please check the display board at the canteen counter
-          for any special announcements or limited-time dishes.
-        </p>
       </section>
     </main>
 
