@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
     const firebaseConfig = {
       apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
       authDomain: "csmss-canteen-96d28.firebaseapp.com",
@@ -75,12 +75,9 @@
         <div class="container">
           <div class="auth-grid">
             <div>
-              <p class="auth-intro-badge">Login / Registration</p>
-              <h1 class="auth-title">Welcome to CSMSS Canteen</h1>
-              <p class="auth-lead">
-                Register to personalize your experience. Student details are shown only when you select
-                <strong>Student</strong>.
-              </p>
+              <p class="auth-intro-badge">Login</p>
+              <h1 class="auth-title">Welcome back</h1>
+              <p class="auth-lead">Sign in to place orders and view your order history.</p>
               <div class="auth-panel">
                 <div style="display: flex; align-items: flex-start; gap: 0.75rem">
                   <div style="margin-top: 0.125rem; height: 2.25rem; width: 2.25rem; border-radius: 1rem; background: rgba(18, 66, 46, 0.1); display: flex; align-items: center; justify-content: center">
@@ -89,9 +86,8 @@
                   <div class="text-sm">
                     <p style="margin: 0; font-weight: 600; color: var(--color-zinc-900)">Quick checks</p>
                     <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem; color: var(--color-zinc-600)">
-                      <li>Phone number must be exactly 10 digits.</li>
-                      <li>All required fields must be filled.</li>
-                      <li>Branch and Year are required for Students.</li>
+                      <li>Enter your email and password.</li>
+                      <li>Phone is optional on this page.</li>
                     </ul>
                   </div>
                 </div>
@@ -103,19 +99,13 @@
                 <div class="auth-form-card__inner">
                   <div class="auth-form-head">
                     <div>
-                      <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--color-zinc-900)">Create your profile</h2>
+                      <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--color-zinc-900)">Login</h2>
                       <p class="hint-text" style="margin-top: 0.25rem">Fields marked with * are required.</p>
                     </div>
                     <div class="auth-form-logo">CC</div>
                   </div>
 
                   <form id="auth-form" class="auth-form" novalidate>
-                    <div class="form-field">
-                      <label for="fullName">Full Name *</label>
-                      <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="e.g., Rahul Sharma" class="input-field" required />
-                      <p class="form-error is-hidden" data-error-for="fullName"></p>
-                    </div>
-
                     <div class="form-grid-auth">
                       <div class="form-field">
                         <label for="email">Email *</label>
@@ -123,65 +113,32 @@
                         <p class="form-error is-hidden" data-error-for="email"></p>
                       </div>
                       <div class="form-field">
-                        <label for="phone">Phone Number *</label>
-                        <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit number" class="input-field" required />
+                        <label for="phone">Phone Number</label>
+                        <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="Optional (10-digit number)" class="input-field" />
                         <p class="form-error is-hidden" data-error-for="phone"></p>
                       </div>
                     </div>
 
-                    <fieldset class="form-field" style="border: none; padding: 0; margin: 0">
-                      <legend style="font-size: 0.875rem; font-weight: 500; color: var(--color-zinc-800); margin-bottom: 0.5rem">Who are you? *</legend>
-                      <div class="role-grid">
-                        <label class="role-label">
-                          <span>Student</span>
-                          <input type="radio" name="role" value="Student" class="radio-accent" required />
-                        </label>
-                        <label class="role-label">
-                          <span>Staff</span>
-                          <input type="radio" name="role" value="Staff" class="radio-accent" required />
-                        </label>
-                      </div>
-                      <p class="form-error is-hidden" data-error-for="role"></p>
-                    </fieldset>
-
-                    <div id="student-fields" class="collapsible-panel collapsible-panel--auth" aria-hidden="true">
-                      <div class="collapsible-panel__inner">
-                        <div class="collapsible-panel__head">
-                          <h3>Student details</h3>
-                          <span class="badge-pill">Required for students</span>
-                        </div>
-                        <div class="form-grid-auth" style="margin-top: 1rem">
-                          <div class="form-field">
-                            <label for="branch">Branch *</label>
-                            <select id="branch" name="branch" class="input-field">
-                              <option value="">Select branch</option>
-                              <option>Computer Science</option>
-                              <option>Electrical</option>
-                              <option>Mechanical</option>
-                              <option>VLSI</option>
-                              <option>Electronics and Computer</option>
-                              <option>AIDS</option>
-                            </select>
-                            <p class="form-error is-hidden" data-error-for="branch"></p>
-                          </div>
-                          <div class="form-field">
-                            <label for="year">Year *</label>
-                            <select id="year" name="year" class="input-field">
-                              <option value="">Select year</option>
-                              <option>1st Year</option>
-                              <option>2nd Year</option>
-                              <option>3rd Year</option>
-                              <option>4th Year</option>
-                            </select>
-                            <p class="form-error is-hidden" data-error-for="year"></p>
-                          </div>
-                        </div>
-                      </div>
+                    <div class="form-field">
+                      <label for="password">Password *</label>
+                      <input id="password" name="password" type="password" class="input-field" required placeholder="Enter your password" />
+                      <p class="form-error is-hidden" data-error-for="password"></p>
                     </div>
 
                     <div style="padding-top: 0.5rem">
-                      <button id="submitBtn" type="button" class="btn-submit-auth">Submit</button>
-                      <p id="form-success" class="form-success is-hidden">Saved locally (demo). You can now continue browsing.</p>
+                      <button id="submitBtn" type="submit" class="btn-submit-auth">Submit</button>
+                      <p id="form-success" class="form-success is-hidden">Signed in successfully. Redirecting...</p>
+                    </div>
+
+                    <div style="margin-top: 0.75rem; text-align: center">
+                      <button
+                        type="button"
+                        data-action="open-signup"
+                        class="link-quiet"
+                        style="text-decoration: underline; cursor: pointer"
+                      >
+                        Open an account now
+                      </button>
                     </div>
                   </form>
                 </div>

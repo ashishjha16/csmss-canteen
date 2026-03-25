@@ -6,6 +6,177 @@ const USER_UPDATED_EVENT = "csmss-user-updated";
 const ORDERS_KEY = "csmss_canteen_order_history";
 const ORDER_HISTORY_UPDATED_EVENT = "csmss-order-history-updated";
 
+// Firebase (Auth + Firestore) - initialized once via cached services.
+const firebaseConfig = {
+  apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
+  authDomain: "csmss-canteen-96d28.firebaseapp.com",
+  projectId: "csmss-canteen-96d28",
+  storageBucket: "csmss-canteen-96d28.firebasestorage.app",
+  messagingSenderId: "541374142906",
+  appId: "1:541374142906:web:8112606f02edbd6eada583",
+  measurementId: "G-JBD9TPTXET",
+};
+
+let firebaseServicesPromise = null;
+let auth = null;
+let db = null;
+
+async function getFirebaseServices() {
+  if (auth && db) return { auth, db };
+  if (firebaseServicesPromise) return firebaseServicesPromise;
+
+  firebaseServicesPromise = (async () => {
+    // Keep modular SDK imports consistent.
+    const { initializeApp, getApps, getApp } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"
+    );
+    const { getAuth } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+    );
+    const { getFirestore } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+    );
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    return { auth, db };
+  })();
+
+  return firebaseServicesPromise;
+}
+
+function getAuthUserUid() {
+  return auth?.currentUser?.uid || "";
+}
+
+async function syncFirestoreUserProfileToLocalStorage(user) {
+  if (!user?.uid) return false;
+  try {
+    const {
+      doc,
+      getDoc,
+      setDoc,
+      collection,
+      query,
+      where,
+      limit,
+      getDocs,
+    } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+    );
+
+    // Primary lookup: users/<uid>
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    let profile = userSnap?.exists() ? userSnap.data() : null;
+
+    // Fallback for older/legacy records: try users by email.
+    // This avoids "profile missing in Firestore" right after signup
+    // when a user doc was created without uid as the document id.
+    if (!profile) {
+      const emailValRaw = String(user?.email || "").trim();
+      const candidates = [];
+      if (emailValRaw) candidates.push(emailValRaw);
+      if (emailValRaw) candidates.push(emailValRaw.toLowerCase());
+
+      for (const candidate of candidates) {
+        if (profile) break;
+        const q = query(
+          collection(db, "users"),
+          where("email", "==", candidate),
+          limit(1)
+        );
+        const emailSnap = await getDocs(q);
+        if (!emailSnap.empty) {
+          profile = emailSnap.docs[0].data();
+          // Best-effort migration: store under users/<uid> for future reads.
+          try {
+            await setDoc(
+              doc(db, "users", user.uid),
+              { ...profile, uid: user.uid },
+              { merge: true }
+            );
+          } catch {
+            // ignore migration errors; we still proceed with localStorage sync.
+          }
+        }
+      }
+    }
+
+    // If profile still doesn't exist, auto-create it for this user
+    // (prevents "profile missing in firestore" forcing user to sign up again).
+    if (!profile) {
+      const emailVal = String(user?.email || "").trim();
+      const displayNameVal = String(user?.displayName || "").trim();
+      profile = {
+        uid: user.uid,
+        email: emailVal,
+        fullName: displayNameVal,
+        phone: "",
+        createdAt: new Date().toISOString(),
+      };
+
+      try {
+        await setDoc(
+          doc(db, "users", user.uid),
+          {
+            uid: user.uid,
+            email: emailVal,
+            fullName: displayNameVal,
+            phone: "",
+            createdAt: profile.createdAt,
+          },
+          { merge: true }
+        );
+      } catch {
+        // If we can't create it, we will still attempt localStorage sync from fallback values.
+      }
+    }
+
+    const fullName = String(profile?.fullName || user.displayName || "");
+    const email = String(profile?.email || user.email || "");
+    const phone = String(profile?.phone || "");
+
+    localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({
+        name: fullName,
+        phone,
+        email,
+      })
+    );
+
+    localStorage.setItem(
+      AUTH_PROFILE_KEY,
+      JSON.stringify({
+        fullName,
+        email,
+        phone,
+        role: String(profile?.userType || ""),
+        branch: String(profile?.branch || ""),
+        rollNumber: String(profile?.rollNumber || ""),
+        year: String(profile?.year || ""),
+        uid: user.uid,
+        savedAt: Date.now(),
+      })
+    );
+
+    return true;
+  } catch (e) {
+    console.error("Failed syncing user profile:", e);
+    return false;
+  }
+}
+
+function clearAuthLocalStorage() {
+  try {
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(AUTH_PROFILE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 function readCart() {
   try {
     const raw = localStorage.getItem(CART_KEY);
@@ -136,6 +307,97 @@ function formatOrderDateTime(iso) {
   } catch {
     return String(iso);
   }
+}
+
+async function fetchLastOrdersForUid(uid, limitCount = 5) {
+  if (!uid) return [];
+  try {
+    await getFirebaseServices();
+    const { collection, query, where, orderBy, limit, getDocs } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+    );
+    const q = query(
+      collection(db, "orders"),
+      where("uid", "==", uid),
+      orderBy("createdAt", "desc"),
+      limit(limitCount)
+    );
+    const snap = await getDocs(q);
+    const orders = snap.docs.map((d) => {
+      const data = d.data() || {};
+      return {
+        id: d.id,
+        createdAt: data.createdAt || "",
+        items: Array.isArray(data.items) ? data.items : [],
+        totalAmount: Number(data.totalAmount ?? data.total ?? 0) || 0,
+        status: String(data.status || "completed"),
+      };
+    });
+    // Only show completed orders (safety, even if we always store completed).
+    return orders.filter((o) => String(o.status).toLowerCase() === "completed");
+  } catch (e) {
+    console.error("Failed fetching last orders:", e);
+    return [];
+  }
+}
+
+async function renderLastOrdersInProfile(wrapper) {
+  const listRoot = wrapper.querySelector("[data-profile-last-orders-list]");
+  if (!listRoot) return;
+
+  const uid = getAuthUserUid();
+  if (!uid) {
+    listRoot.innerHTML =
+      '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">No orders yet</p>';
+    return;
+  }
+
+  listRoot.innerHTML =
+    '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">Loading…</p>';
+
+  const orders = await fetchLastOrdersForUid(uid, 5);
+  if (!orders.length) {
+    listRoot.innerHTML =
+      '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">No orders yet</p>';
+    return;
+  }
+
+  listRoot.innerHTML = orders
+    .map((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      return `
+        <div class="order-history-card">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
+            <p style="margin:0;font-size:11px;font-weight:600;color:var(--color-zinc-900)">${escapeHtml(
+              order.id
+            )}</p>
+            <p style="margin:0;font-size:10px;color:var(--color-zinc-500);white-space:nowrap">${escapeHtml(
+              formatOrderDateTime(order.createdAt)
+            )}</p>
+          </div>
+          <ul style="margin:0.5rem 0 0;padding:0;list-style:none;font-size:11px;color:var(--color-zinc-700)">
+            ${items
+              .map((it) => {
+                const qty = Number(it?.quantity ?? 0) || 0;
+                const lineTotal = Number(it?.lineTotal ?? 0) || 0;
+                return `
+                  <li style="display:flex;justify-content:space-between;gap:0.5rem">
+                    <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${escapeHtml(
+                      it?.name || ""
+                    )} × ${escapeHtml(String(qty))}</span>
+                    <span style="flex-shrink:0;font-weight:500">${formatCurrency(lineTotal)}</span>
+                  </li>
+                `;
+              })
+              .join("")}
+          </ul>
+          <p style="margin:0.5rem 0 0;padding-top:0.5rem;border-top:1px solid rgba(228,228,231,0.8);font-size:11px;font-weight:600;color:var(--color-primary)">Total: ${formatCurrency(
+            order.totalAmount
+          )}</p>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 // Basic menu data used across pages
@@ -441,12 +703,18 @@ function initSignupModalGlobal() {
   if (!initSignupModalGlobal._orderHistoryListener) {
     initSignupModalGlobal._orderHistoryListener = true;
     window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, () => {
-      // History updates are consumed by dedicated Order History page.
+      // Refresh the "Last 5 Orders" preview inside any open profile dropdown.
+      document
+        .querySelectorAll('[data-profile-wrapper="true"]')
+        .forEach((wrapper) => {
+          renderLastOrdersInProfile(wrapper).catch(() => {});
+        });
     });
   }
 
   const SIGNUP_STORAGE_KEY = "csmss_canteen_signup_profiles";
   const modalId = "signup-modal";
+  const loginModalId = "login-modal";
   const DEFAULT_EMAIL = "";
 
   function readUserProfile() {
@@ -523,13 +791,20 @@ function initSignupModalGlobal() {
       if (!logoutBtn) return;
       e.preventDefault();
 
-      try {
-        localStorage.removeItem(USER_KEY);
-        localStorage.removeItem(AUTH_PROFILE_KEY);
-      } catch {
-        // ignore
-      }
-      location.reload();
+      (async () => {
+        try {
+          await getFirebaseServices();
+          const { signOut } = await import(
+            "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+          );
+          await signOut(auth);
+        } catch (err) {
+          console.error("Logout error:", err);
+        } finally {
+          clearAuthLocalStorage();
+          location.reload();
+        }
+      })();
     });
   }
 
@@ -545,6 +820,11 @@ function initSignupModalGlobal() {
     setText('[data-profile-name="true"]', user.name);
     setText('[data-profile-phone="true"]', user.phone);
     setText('[data-profile-email="true"]', user.email);
+
+    // Fire-and-forget: renders the "Last 5 Orders" section for the logged-in user.
+    renderLastOrdersInProfile(wrapper).catch(() => {
+      // ignore UI refresh errors
+    });
   }
 
   function onlyDigits(value) {
@@ -566,6 +846,11 @@ function initSignupModalGlobal() {
     container.querySelectorAll('[data-auth-guest="true"]').forEach((el) => el.remove());
     container
       .querySelectorAll('[data-action="open-signup"]')
+      .forEach((el) => {
+        if (!el.closest("[data-auth-guest]")) el.remove();
+      });
+    container
+      .querySelectorAll('[data-action="open-login"]')
       .forEach((el) => {
         if (!el.closest("[data-auth-guest]")) el.remove();
       });
@@ -607,7 +892,9 @@ function initSignupModalGlobal() {
         </button>
       `
         : `
-        <a href="login.html" class="${loginClass}">Login</a>
+        <button type="button" data-action="open-login" class="${loginClass}">
+          Login
+        </button>
         <button type="button" data-action="open-signup" class="${signupClass}">
           Sign up
         </button>
@@ -685,6 +972,11 @@ function initSignupModalGlobal() {
               </div>
             </div>
 
+            <div class="order-history-block">
+              <p class="order-history-title">Last 5 Orders</p>
+              <div data-profile-last-orders-list class="order-history-list"></div>
+            </div>
+
             <a href="order-history.html" class="btn-secondary" style="width:100%;text-decoration:none;justify-content:center">
               View Order History
             </a>
@@ -748,7 +1040,9 @@ function initSignupModalGlobal() {
         </button>
       `
         : `
-        <a href="login.html" class="${loginClass}">Login</a>
+        <button type="button" data-action="open-login" class="${loginClass}">
+          Login
+        </button>
         <button type="button" data-action="open-signup" class="${signupClass}">
           Sign up
         </button>
@@ -824,6 +1118,11 @@ function initSignupModalGlobal() {
                 <p class="profile-field-label">Email</p>
                 <p class="profile-field-value" data-profile-email="true">—</p>
               </div>
+            </div>
+
+            <div class="order-history-block">
+              <p class="order-history-title">Last 5 Orders</p>
+              <div data-profile-last-orders-list class="order-history-list"></div>
             </div>
 
             <a href="order-history.html" class="btn-secondary" style="width:100%;text-decoration:none;justify-content:center">
@@ -918,6 +1217,20 @@ function initSignupModalGlobal() {
 
             <div class="signup-form__row2">
               <div>
+                <label for="signup-password" class="signup-label">Password *</label>
+                <input
+                  id="signup-password"
+                  name="password"
+                  type="password"
+                  autocomplete="new-password"
+                  class="signup-input"
+                  placeholder="At least 8 chars, 1 uppercase, 1 number, 1 special"
+                  required
+                />
+                <p class="signup-error is-hidden" data-error-for="password"></p>
+              </div>
+
+              <div>
                 <label for="signup-phone" class="signup-label">Phone Number *</label>
                 <input
                   id="signup-phone"
@@ -931,8 +1244,10 @@ function initSignupModalGlobal() {
                 />
                 <p class="signup-error is-hidden" data-error-for="phone"></p>
               </div>
+            </div>
 
-              <fieldset class="signup-fieldset">
+            <div class="signup-form__row2">
+              <fieldset class="signup-fieldset" style="grid-column: 1 / -1;">
                 <legend>User Type *</legend>
                 <div class="signup-role-grid">
                   <label class="signup-role-label">
@@ -946,6 +1261,7 @@ function initSignupModalGlobal() {
                 </div>
                 <p class="signup-error is-hidden" data-error-for="userType"></p>
               </fieldset>
+              <div class="signup-grid-spacer" aria-hidden="true"></div>
             </div>
 
             <div
@@ -1007,6 +1323,14 @@ function initSignupModalGlobal() {
 
             <div class="signup-form__footer">
               <p class="text-muted" style="font-size: 11px">Fill details and submit.</p>
+              <button
+                type="button"
+                data-action="go-to-login"
+                class="link-quiet"
+                style="font-size: 11px; cursor: pointer; text-decoration: underline"
+              >
+                Already have an account? Login
+              </button>
               <button type="submit" class="btn-signup-submit">Submit</button>
             </div>
           </form>
@@ -1018,6 +1342,125 @@ function initSignupModalGlobal() {
     return modal;
   }
 
+  function ensureLoginModal() {
+    let modal = document.getElementById(loginModalId);
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = loginModalId;
+    modal.className = "signup-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-hidden", "true");
+
+    modal.innerHTML = `
+      <div data-login-backdrop class="signup-modal__backdrop"></div>
+      <div class="signup-modal__panel">
+        <div class="signup-modal__card">
+          <div class="signup-modal__header">
+            <div>
+              <p class="signup-modal__title">Login</p>
+              <p class="signup-modal__lead">Use email or phone plus password.</p>
+            </div>
+            <button
+              type="button"
+              data-action="close-login"
+              class="icon-btn"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form id="login-form" class="signup-form" novalidate>
+            <div class="signup-form__row2">
+              <div>
+                <label for="login-email" class="signup-label">Email</label>
+                <input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  class="signup-input"
+                  placeholder="Enter your email"
+                />
+                <p class="signup-error is-hidden" data-error-for="email"></p>
+              </div>
+
+              <div>
+                <label for="login-phone" class="signup-label">Phone Number</label>
+                <input
+                  id="login-phone"
+                  name="phone"
+                  type="tel"
+                  inputmode="numeric"
+                  maxlength="10"
+                  class="signup-input"
+                  placeholder="10-digit number"
+                />
+                <p class="signup-error is-hidden" data-error-for="phone"></p>
+              </div>
+            </div>
+
+            <div class="signup-form__row2" style="grid-column: 1 / -1;">
+              <div style="grid-column: 1 / -1;">
+                <label for="login-password" class="signup-label">Password *</label>
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  class="signup-input"
+                  placeholder="Enter your password"
+                  required
+                />
+                <p class="signup-error is-hidden" data-error-for="password"></p>
+              </div>
+            </div>
+
+            <p class="signup-error is-hidden" data-error-for="login"></p>
+
+            <div class="signup-form__footer">
+              <button
+                type="button"
+                data-action="go-to-signup"
+                class="link-quiet"
+                style="font-size: 11px; cursor: pointer; text-decoration: underline"
+              >
+                Open an account now
+              </button>
+              <button type="submit" class="btn-signup-submit">Login</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function openLoginModal() {
+    if (typeof bindLoginModalOnce === "function") bindLoginModalOnce();
+    const modal = ensureLoginModal();
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    const first = modal.querySelector("#login-email") || modal.querySelector("#login-phone");
+    if (first) first.focus();
+  }
+
+  function closeLoginModal() {
+    const modal = document.getElementById(loginModalId);
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
   function openModal() {
     const modal = ensureModal();
     modal.classList.add("is-open");
@@ -1026,6 +1469,11 @@ function initSignupModalGlobal() {
 
     const first = modal.querySelector("#signup-fullName");
     if (first) first.focus();
+  }
+
+  // Public modal helpers (used for toggling between signup/login).
+  function openSignupModal() {
+    openModal();
   }
 
   function closeModal() {
@@ -1049,9 +1497,133 @@ function initSignupModalGlobal() {
   }
 
   function clearErrors(root) {
-    ["fullName", "email", "phone", "userType", "branch", "rollNumber", "year"].forEach(
-      (k) => setFieldError(root, k, "")
-    );
+    [
+      "fullName",
+      "email",
+      "password",
+      "phone",
+      "userType",
+      "branch",
+      "rollNumber",
+      "year",
+    ].forEach((k) => setFieldError(root, k, ""));
+  }
+
+  function clearLoginErrors(root) {
+    ["email", "phone", "password", "login"].forEach((k) => setFieldError(root, k, ""));
+  }
+
+  function bindLoginModalOnce() {
+    const modal = ensureLoginModal();
+    if (modal.getAttribute("data-bound") === "true") return;
+    modal.setAttribute("data-bound", "true");
+
+    const form = modal.querySelector("#login-form");
+    const emailInput = modal.querySelector("#login-email");
+    const phoneInput = modal.querySelector("#login-phone");
+    const passwordInput = modal.querySelector("#login-password");
+
+    function setFieldErrorForUI(key, message) {
+      setFieldError(modal, key, message);
+    }
+
+    modal.addEventListener("click", (e) => {
+      const target = e.target;
+      if (target?.matches?.("[data-login-backdrop]")) closeLoginModal();
+      if (target?.closest?.('[data-action="close-login"]')) closeLoginModal();
+
+      // Switch to signup modal without navigation/reload.
+      if (target?.closest?.('[data-action="go-to-signup"]')) {
+        closeLoginModal();
+        if (typeof bindModalOnce === "function") bindModalOnce();
+        if (typeof openSignupModal === "function") openSignupModal();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeLoginModal();
+    });
+
+    if (phoneInput) {
+      phoneInput.addEventListener("input", () => {
+        phoneInput.value = onlyDigits(phoneInput.value).slice(0, 10);
+      });
+    }
+
+    if (!form) return;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearLoginErrors(modal);
+
+      const emailVal = String(emailInput?.value || "").trim();
+      const phoneDigits = onlyDigits(phoneInput?.value || "");
+      const passwordVal = String(passwordInput?.value || "");
+
+      const hasEmail = !!emailVal;
+      const hasPhone = !!phoneDigits;
+
+      if (!passwordVal) {
+        setFieldErrorForUI("password", "Password is required.");
+        return;
+      }
+
+      if (!hasEmail && !hasPhone) {
+        setFieldErrorForUI("login", "Enter email or phone number");
+        return;
+      }
+
+      try {
+        await getFirebaseServices();
+        const { signInWithEmailAndPassword } = await import(
+          "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+        );
+
+        let loginEmail = "";
+
+        // Prefer email if both are present.
+        if (hasEmail) {
+          loginEmail = emailVal;
+        } else {
+          // Phone login: lookup user's email via Firestore.
+          const { collection, query, where, limit, getDocs } = await import(
+            "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+          );
+          const q = query(
+            collection(db, "users"),
+            where("phone", "==", phoneDigits),
+            limit(1)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const data = snap.docs[0].data() || {};
+            loginEmail = String(data?.email || "").trim();
+          }
+        }
+
+        if (!loginEmail) {
+          setFieldErrorForUI("login", "No account found with this phone number");
+          return;
+        }
+
+        const cred = await signInWithEmailAndPassword(
+          auth,
+          loginEmail,
+          passwordVal
+        );
+
+        // Auto-create + sync profile to localStorage.
+        await syncFirestoreUserProfileToLocalStorage(cred.user);
+        window.dispatchEvent(new Event(USER_UPDATED_EVENT));
+
+        showMiniToast("Logged in successfully");
+        form.reset();
+        closeLoginModal();
+      } catch (err) {
+        console.error("Login error:", err);
+        setFieldErrorForUI("password", "Invalid email or password.");
+      }
+    });
   }
 
   function bindModalOnce() {
@@ -1089,6 +1661,11 @@ function initSignupModalGlobal() {
       const target = e.target;
       if (target?.matches?.("[data-signup-backdrop]")) closeModal();
       if (target?.closest?.('[data-action="close-signup"]')) closeModal();
+      if (target?.closest?.('[data-action="go-to-login"]')) {
+        closeModal();
+        if (typeof bindLoginModalOnce === "function") bindLoginModalOnce();
+        if (typeof openLoginModal === "function") openLoginModal();
+      }
     });
 
     document.addEventListener("keydown", (e) => {
@@ -1119,134 +1696,160 @@ function initSignupModalGlobal() {
     setStudentVisibility(false);
     if (!form) return;
 
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearErrors(modal);
 
-     form.addEventListener("submit", async (e) => {
-     e.preventDefault();
-     clearErrors(modal);
+      const fd = new FormData(form);
+      const fullName = String(fd.get("fullName") || "").trim();
+      const emailVal = String(fd.get("email") || "").trim();
+      const passwordVal = String(fd.get("password") || "");
+      const phoneDigits = onlyDigits(fd.get("phone") || "");
+      const userType = getUserType();
 
-     const fd = new FormData(form);
-     const fullName = String(fd.get("fullName") || "").trim();
-    const emailVal = String(fd.get("email") || "").trim();
-     const phoneDigits = onlyDigits(fd.get("phone") || "");
-     const userType = getUserType();
+      let ok = true;
 
-     let ok = true;
+      if (!fullName) {
+        ok = false;
+        setFieldError(modal, "fullName", "Full Name is required.");
+      }
 
-     if (!fullName) {
-       ok = false;
-      setFieldError(modal, "fullName", "Full Name is required.");
-  }
-  if (!emailVal) {
-    ok = false;
-    setFieldError(modal, "email", "Email is required.");
-  } else {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailVal)) {
-      ok = false;
-      setFieldError(modal, "email", "Please enter a valid email.");
-    }
-  }
-  if (!phoneDigits) {
-    ok = false;
-    setFieldError(modal, "phone", "Phone number is required.");
-  } else if (phoneDigits.length !== 10) {
-    ok = false;
-    setFieldError(modal, "phone", "Phone number must be exactly 10 digits.");
-  }
-  if (!userType) {
-    ok = false;
-    setFieldError(modal, "userType", "Please select Staff or Student.");
-  }
+      if (!emailVal) {
+        ok = false;
+        setFieldError(modal, "email", "Email is required.");
+      } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailVal)) {
+          ok = false;
+          setFieldError(modal, "email", "Please enter a valid email.");
+        }
+      }
 
-  const isStudent = userType === "Student";
-  const branchVal = String(fd.get("branch") || "").trim();
-  const rollVal = String(fd.get("rollNumber") || "").trim();
-  const yearVal = String(fd.get("year") || "").trim();
+      if (!passwordVal) {
+        ok = false;
+        setFieldError(modal, "password", "Password is required.");
+      } else {
+        const hasUppercase = /[A-Z]/.test(passwordVal);
+        const hasNumber = /\d/.test(passwordVal);
+        const hasSpecial = /[^A-Za-z0-9]/.test(passwordVal);
 
-  if (isStudent) {
-    if (!branchVal) {
-      ok = false;
-      setFieldError(modal, "branch", "Branch is required for Students.");
-    }
-    if (!rollVal) {
-      ok = false;
-      setFieldError(modal, "rollNumber", "Roll Number is required for Students.");
-    }
-    if (!yearVal) {
-      ok = false;
-      setFieldError(modal, "year", "Year is required for Students.");
-    }
-  }
+        if (passwordVal.length < 8) {
+          ok = false;
+          setFieldError(modal, "password", "Password must be at least 8 characters.");
+        } else if (!hasUppercase || !hasNumber || !hasSpecial) {
+          ok = false;
+          setFieldError(
+            modal,
+            "password",
+            "Password must include 1 uppercase letter, 1 number, and 1 special character."
+          );
+        }
+      }
 
-  if (!ok) return;
+      if (!phoneDigits) {
+        ok = false;
+        setFieldError(modal, "phone", "Phone number is required.");
+      } else if (phoneDigits.length !== 10) {
+        ok = false;
+        setFieldError(modal, "phone", "Phone number must be exactly 10 digits.");
+      }
 
-  const payload = {
-    fullName,
-    email: emailVal,
-    phone: phoneDigits,
-    userType,
-    branch: isStudent ? branchVal : "",
-    rollNumber: isStudent ? rollVal : "",
-    year: isStudent ? yearVal : "",
-    createdAt: new Date().toISOString(),
-  };
+      if (!userType) {
+        ok = false;
+        setFieldError(modal, "userType", "Please select Staff or Student.");
+      }
 
-  try {
-    const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-    const { getFirestore, collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+      const isStudent = userType === "Student";
+      const branchVal = String(fd.get("branch") || "").trim();
+      const rollVal = String(fd.get("rollNumber") || "").trim();
+      const yearVal = String(fd.get("year") || "").trim();
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
-      authDomain: "csmss-canteen-96d28.firebaseapp.com",
-      projectId: "csmss-canteen-96d28",
-      storageBucket: "csmss-canteen-96d28.firebasestorage.app",
-      messagingSenderId: "541374142906",
-      appId: "1:541374142906:web:8112606f02edbd6eada583",
-      measurementId: "G-JBD9TPTXET"
-    };
+      if (isStudent) {
+        if (!branchVal) {
+          ok = false;
+          setFieldError(modal, "branch", "Branch is required for Students.");
+        }
+        if (!rollVal) {
+          ok = false;
+          setFieldError(modal, "rollNumber", "Roll Number is required for Students.");
+        }
+        if (!yearVal) {
+          ok = false;
+          setFieldError(modal, "year", "Year is required for Students.");
+        }
+      }
 
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+      if (!ok) return;
 
-    await addDoc(collection(db, "users"), payload);
+      try {
+        await getFirebaseServices();
+        const { createUserWithEmailAndPassword, updateProfile } = await import(
+          "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+        );
+        const { doc, setDoc } = await import(
+          "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+        );
 
-    // Persist minimal profile for navbar avatar dropdown + keep auth data for checkout autofill.
-    try {
-      localStorage.setItem(
-        USER_KEY,
-        JSON.stringify({
-          name: fullName,
-          phone: phoneDigits,
-          email: emailVal,
-        })
-      );
-      localStorage.setItem(
-        AUTH_PROFILE_KEY,
-        JSON.stringify({
+        const cred = await createUserWithEmailAndPassword(
+          auth,
+          emailVal,
+          passwordVal
+        );
+        const user = cred.user;
+
+        await updateProfile(user, { displayName: fullName });
+
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
           fullName,
           email: emailVal,
           phone: phoneDigits,
-          role: userType,
+          userType,
           branch: isStudent ? branchVal : "",
           rollNumber: isStudent ? rollVal : "",
           year: isStudent ? yearVal : "",
-          savedAt: Date.now(),
-        })
-      );
-    } catch {
-      // ignore storage errors
-    }
-    window.dispatchEvent(new Event(USER_UPDATED_EVENT));
+          createdAt: new Date().toISOString(),
+        });
 
-    showMiniToast("Sign up saved successfully");
-    form.reset();
-    setStudentVisibility(false);
-    closeModal();
-  } catch (error) {
-    console.error("Firebase save error:", error);
-    alert("Error: " + error.message);
-  }
-});
+        // Persist profile for navbar avatar dropdown + checkout autofill.
+        try {
+          localStorage.setItem(
+            USER_KEY,
+            JSON.stringify({
+              name: fullName,
+              phone: phoneDigits,
+              email: emailVal,
+            })
+          );
+
+          localStorage.setItem(
+            AUTH_PROFILE_KEY,
+            JSON.stringify({
+              fullName,
+              email: emailVal,
+              phone: phoneDigits,
+              role: userType,
+              branch: isStudent ? branchVal : "",
+              rollNumber: isStudent ? rollVal : "",
+              year: isStudent ? yearVal : "",
+              uid: user.uid,
+              savedAt: Date.now(),
+            })
+          );
+        } catch {
+          // ignore storage errors
+        }
+
+        window.dispatchEvent(new Event(USER_UPDATED_EVENT));
+        showMiniToast("Sign up successful");
+        form.reset();
+        setStudentVisibility(false);
+        closeModal();
+      } catch (error) {
+        console.error("Firebase signup error:", error);
+        alert("Error: " + error.message);
+      }
+    });
   }
 
   function bindOpenButtons() {
@@ -1254,9 +1857,20 @@ function initSignupModalGlobal() {
     document.querySelectorAll('[data-action="open-signup"]').forEach((el) => {
       if (el.getAttribute("data-bound") === "true") return;
       el.setAttribute("data-bound", "true");
-      el.addEventListener("click", () => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
         bindModalOnce();
-        openModal();
+        openSignupModal();
+      });
+    });
+
+    document.querySelectorAll('[data-action="open-login"]').forEach((el) => {
+      if (el.getAttribute("data-bound") === "true") return;
+      el.setAttribute("data-bound", "true");
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        bindLoginModalOnce();
+        openLoginModal();
       });
     });
   }
@@ -1265,6 +1879,10 @@ function initSignupModalGlobal() {
   ensureButtonInDesktopNav();
   ensureButtonInMobileMenu();
   bindOpenButtons();
+
+  // Expose modal toggles for other page guards (order history, etc).
+  window.openSignupModal = openSignupModal;
+  window.openLoginModal = openLoginModal;
 
   window.addEventListener(USER_UPDATED_EVENT, () => {
     ensureButtonInDesktopNav();
@@ -1280,10 +1898,20 @@ function initAuthPage() {
   const phone = document.getElementById("phone");
   const fullName = document.getElementById("fullName");
   const email = document.getElementById("email");
+  const password = document.getElementById("password");
   const branch = document.getElementById("branch");
   const year = document.getElementById("year");
 
   if (footerYear) footerYear.textContent = String(new Date().getFullYear());
+  if (auth?.currentUser) {
+    return;
+  }
+
+  // Keep auth flows in the shared modal (no redirects).
+  if (typeof window.openLoginModal === "function") {
+    window.openLoginModal();
+    return;
+  }
 
   const roleInputs = Array.from(
     document.querySelectorAll('input[name="role"]')
@@ -1318,8 +1946,8 @@ function initAuthPage() {
   }
 
   function clearErrors() {
-    ["fullName", "email", "phone", "role", "branch", "year"].forEach((k) =>
-      setFieldError(k, "")
+    ["fullName", "email", "password", "phone", "role", "branch", "year"].forEach(
+      (k) => setFieldError(k, "")
     );
   }
 
@@ -1350,22 +1978,16 @@ function initAuthPage() {
   setStudentVisibility(getRole() === "Student");
 
   if (!form) return;
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (success) success.classList.add("is-hidden");
 
     clearErrors();
     let ok = true;
 
-    const nameVal = (fullName?.value || "").trim();
     const emailVal = (email?.value || "").trim();
-    const phoneDigits = onlyDigits(phone?.value || "");
-    const roleVal = getRole();
+    const passwordVal = String(password?.value || "");
 
-    if (!nameVal) {
-      ok = false;
-      setFieldError("fullName", "Full Name is required.");
-    }
     if (!emailVal) {
       ok = false;
       setFieldError("email", "Email is required.");
@@ -1376,65 +1998,39 @@ function initAuthPage() {
         setFieldError("email", "Please enter a valid email.");
       }
     }
-    if (!phoneDigits) {
-      ok = false;
-      setFieldError("phone", "Phone number is required.");
-    } else if (phoneDigits.length !== 10) {
-      ok = false;
-      setFieldError("phone", "Phone number must be exactly 10 digits.");
-    }
-    if (!roleVal) {
-      ok = false;
-      setFieldError("role", "Please select Student or Staff.");
-    }
 
-    const isStudent = roleVal === "Student";
-    if (isStudent) {
-      const branchVal = (branch?.value || "").trim();
-      const yearVal = (year?.value || "").trim();
-      if (!branchVal) {
-        ok = false;
-        setFieldError("branch", "Branch is required for Students.");
-      }
-      if (!yearVal) {
-        ok = false;
-        setFieldError("year", "Year is required for Students.");
-      }
+    if (!passwordVal) {
+      ok = false;
+      setFieldError("password", "Password is required.");
     }
 
     if (!ok) return;
 
-    const payload = {
-      fullName: nameVal,
-      email: emailVal,
-      phone: phoneDigits,
-      role: roleVal,
-      branch: isStudent ? branch?.value || "" : "",
-      year: isStudent ? year?.value || "" : "",
-      savedAt: Date.now(),
-    };
-
     try {
-      localStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(payload));
-
-      localStorage.setItem(
-        USER_KEY,
-        JSON.stringify({
-          name: nameVal,
-          phone: phoneDigits,
-          email: emailVal,
-        })
+      await getFirebaseServices();
+      const { signInWithEmailAndPassword } = await import(
+        "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
       );
-    } catch {
-      // Ignore storage errors in restricted environments
+
+      const cred = await signInWithEmailAndPassword(
+        auth,
+        emailVal,
+        passwordVal
+      );
+
+      const synced = await syncFirestoreUserProfileToLocalStorage(cred.user);
+      if (!synced) {
+        alert("Your profile is missing in Firestore. Please sign up again.");
+        return;
+      }
+
+      window.dispatchEvent(new Event(USER_UPDATED_EVENT));
+      if (success) success.classList.remove("is-hidden");
+      showMiniToast("Logged in successfully");
+    } catch (err) {
+      console.error("Login error:", err);
+      setFieldError("password", "Invalid email or password.");
     }
-
-    window.dispatchEvent(new Event(USER_UPDATED_EVENT));
-
-    if (success) success.classList.remove("is-hidden");
-    showMiniToast("Profile saved (demo)");
-    form.reset();
-    setStudentVisibility(false);
   });
 }
 
@@ -1626,65 +2222,111 @@ function initCategoryPage(categoryKey) {
   bindMenuButtons(document);
 }
 
-function initOrderHistoryPage() {
+async function initOrderHistoryPage() {
   const listRoot = document.getElementById("order-history-list");
   const emptyRoot = document.getElementById("order-history-empty");
   if (!listRoot || !emptyRoot) return;
 
-  function render() {
-    const orders = getOrdersForCurrentUser();
-    listRoot.innerHTML = "";
+  await getFirebaseServices();
 
-    if (!orders.length) {
+  const uid = getAuthUserUid();
+  if (!uid) {
+    // Guard: open login modal instead of redirecting.
+    if (typeof window.openLoginModal === "function") window.openLoginModal();
+    emptyRoot.textContent = "Please log in to view your order history.";
+    emptyRoot.classList.remove("is-hidden");
+    return;
+  }
+
+  async function render() {
+    listRoot.innerHTML = "";
+    emptyRoot.classList.add("is-hidden");
+
+    try {
+      const { collection, query, where, orderBy, getDocs } = await import(
+        "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+      );
+      const q = query(
+        collection(db, "orders"),
+        where("uid", "==", uid),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const orders = snap.docs
+        .map((d) => {
+          const data = d.data() || {};
+          return {
+            id: d.id,
+            createdAt: data.createdAt || "",
+            items: Array.isArray(data.items) ? data.items : [],
+            totalAmount: Number(data.totalAmount ?? 0) || 0,
+            status: String(data.status || ""),
+          };
+        })
+        .filter((o) => String(o.status).toLowerCase() === "completed");
+
+      if (!orders.length) {
+        emptyRoot.classList.remove("is-hidden");
+        return;
+      }
+
+      orders.forEach((order) => {
+        const itemsList = Array.isArray(order.items) ? order.items : [];
+        const itemCount = itemsList.reduce(
+          (sum, it) => sum + (Number(it.quantity) || 0),
+          0
+        );
+
+        const card = document.createElement("article");
+        card.className = "order-history-card";
+        card.innerHTML = `
+          <div class="summary-row">
+            <span style="font-weight:600;color:var(--color-zinc-900)">${escapeHtml(
+              order.id || ""
+            )}</span>
+            <span class="text-muted" style="font-size:11px">${escapeHtml(
+              formatOrderDateTime(order.createdAt || "")
+            )}</span>
+          </div>
+          <div class="summary-row summary-row--small" style="margin-top:0.25rem">
+            <span>Status</span>
+            <span style="font-weight:600;color:var(--color-emerald-700)">${escapeHtml(
+              String(order.status || "completed")
+            )}</span>
+          </div>
+          <div class="summary-row summary-row--small">
+            <span>Items</span>
+            <span>${escapeHtml(String(itemCount))}</span>
+          </div>
+          <ul style="margin:0.625rem 0 0;padding:0;list-style:none">
+            ${itemsList
+              .map(
+                (it) => `
+              <li class="summary-row summary-row--small">
+                <span>${escapeHtml(it.name || "")} × ${escapeHtml(
+                  String(Number(it.quantity) || 0)
+                )}</span>
+                <span>${formatCurrency(Number(it.lineTotal) || 0)}</span>
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+          <div class="summary-row summary-row--total">
+            <span>Total</span>
+            <span>${formatCurrency(Number(order.totalAmount) || 0)}</span>
+          </div>
+        `;
+        listRoot.appendChild(card);
+      });
+    } catch (err) {
+      console.error("Failed rendering order history:", err);
       emptyRoot.classList.remove("is-hidden");
       return;
     }
-
-    emptyRoot.classList.add("is-hidden");
-    orders.forEach((order) => {
-      const itemsList = Array.isArray(order.items) ? order.items : [];
-      const status = String(order.status || "Completed");
-      const itemCount =
-        Number(order.itemCount) ||
-        itemsList.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
-
-      const card = document.createElement("article");
-      card.className = "order-history-card";
-      card.innerHTML = `
-        <div class="summary-row">
-          <span style="font-weight:600;color:var(--color-zinc-900)">${escapeHtml(order.id || "")}</span>
-          <span class="text-muted" style="font-size:11px">${escapeHtml(formatOrderDateTime(order.createdAt || ""))}</span>
-        </div>
-        <div class="summary-row summary-row--small" style="margin-top:0.25rem">
-          <span>Status</span>
-          <span style="font-weight:600;color:var(--color-emerald-700)">${escapeHtml(status)}</span>
-        </div>
-        <div class="summary-row summary-row--small">
-          <span>Items</span>
-          <span>${escapeHtml(String(itemCount))}</span>
-        </div>
-        <ul style="margin:0.625rem 0 0;padding:0;list-style:none">
-          ${itemsList
-            .map(
-              (it) => `
-            <li class="summary-row summary-row--small">
-              <span>${escapeHtml(it.name || "")} × ${escapeHtml(String(Number(it.quantity) || 0))}</span>
-              <span>${formatCurrency(Number(it.lineTotal) || 0)}</span>
-            </li>
-          `
-            )
-            .join("")}
-        </ul>
-        <div class="summary-row summary-row--total">
-          <span>Total</span>
-          <span>${formatCurrency(Number(order.total) || 0)}</span>
-        </div>
-      `;
-      listRoot.appendChild(card);
-    });
   }
 
-  render();
+  await render();
   window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, render);
 }
 
@@ -1812,10 +2454,32 @@ function renderCartPage() {
   const branchEl = document.getElementById("checkout-branch");
   const rollEl = document.getElementById("checkout-roll");
 
-  function openCheckout() {
+  async function openCheckout() {
     if (!checkoutModal) return;
 
-    const rawProfile = localStorage.getItem("csmss_auth_profile");
+    await getFirebaseServices();
+    const user = auth?.currentUser;
+    if (!user) {
+      if (msg) {
+        msg.textContent = "Please login/registration before checkout.";
+        msg.classList.remove("is-hidden");
+      }
+      showMiniToast("Please log in / register first");
+      return;
+    }
+
+    const synced = await syncFirestoreUserProfileToLocalStorage(user);
+    if (!synced) {
+      if (msg) {
+        msg.textContent =
+          "Your profile was not found. Please log in again.";
+        msg.classList.remove("is-hidden");
+      }
+      showMiniToast("Please log in again");
+      return;
+    }
+
+    const rawProfile = localStorage.getItem(AUTH_PROFILE_KEY);
     let profile = null;
     try {
       profile = rawProfile ? JSON.parse(rawProfile) : null;
@@ -1823,23 +2487,12 @@ function renderCartPage() {
       profile = null;
     }
 
-    if (!profile) {
+    if (!profile || !profile.email) {
       if (msg) {
-        msg.textContent =
-          "No saved profile found. Please complete login/registration before checkout.";
+        msg.textContent = "Saved profile not found. Please log in again.";
         msg.classList.remove("is-hidden");
       }
-      showMiniToast("Please log in / register first");
-      return;
-    }
-
-    if (!profile.email) {
-      if (msg) {
-        msg.textContent =
-          "No email found in saved profile. Please login/register again.";
-        msg.classList.remove("is-hidden");
-      }
-      showMiniToast("Please login/register again");
+      showMiniToast("Please login again");
       return;
     }
 
@@ -1911,25 +2564,54 @@ function renderCartPage() {
     });
   }
   if (checkoutForm) {
-    checkoutForm.addEventListener("submit", (e) => {
+    checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const cart = readCart();
       if (!cart.length) {
         showMiniToast("Your cart is empty");
         return;
       }
-      const emailKey = getUserEmailKeyForOrders();
-      if (!emailKey) {
-        showMiniToast("Please log in with a saved email to place an order");
-        return;
+
+      try {
+        await getFirebaseServices();
+        const user = auth?.currentUser;
+        if (!user) {
+          showMiniToast("Please log in to place an order");
+          return;
+        }
+
+        const { addDoc, collection } = await import(
+          "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+        );
+
+        const totals = getCartTotals(cart);
+        const items = cart.map((i) => ({
+          id: i.id,
+          name: i.name,
+          price: Number(i.price) || 0,
+          quantity: Number(i.quantity) || 0,
+          lineTotal:
+            (Number(i.price) || 0) * (Number(i.quantity) || 0),
+        }));
+
+        await addDoc(collection(db, "orders"), {
+          uid: user.uid,
+          items,
+          totalAmount: totals.total,
+          status: "completed",
+          createdAt: new Date().toISOString(),
+        });
+
+        writeCart([]);
+        updateCartBadges();
+        closeCheckout();
+        refresh();
+        showMiniToast("Order confirmed!");
+        window.dispatchEvent(new Event(ORDER_HISTORY_UPDATED_EVENT));
+      } catch (err) {
+        console.error("Failed saving order:", err);
+        alert("Error placing order: " + (err?.message || "Unknown error"));
       }
-      const orderRecord = buildOrderRecordFromCart(cart);
-      appendOrderForCurrentUser(orderRecord);
-      writeCart([]);
-      updateCartBadges();
-      closeCheckout();
-      refresh();
-      showMiniToast("Order confirmed!");
     });
   }
 
@@ -1944,24 +2626,65 @@ window.addEventListener("storage", (e) => {
   }
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   setCurrentYear();
   setupMobileNav();
   updateCartBadges();
-  initSignupModalGlobal();
 
+  // Ensure Firebase services are ready before we attempt auth/order queries.
+  await getFirebaseServices();
   const page = document.body.getAttribute("data-page");
-  if (page === "home") {
-    initHeroParallax();
-    initHomePage();
-  }
-  if (page === "menu") initMenuPage();
-  if (page === "vegetarian") initCategoryPage("vegetarian");
-  if (page === "nonveg") initCategoryPage("nonveg");
-  if (page === "beverages") initCategoryPage("beverages");
-  if (page === "breakfast") initCategoryPage("breakfast");
-  if (page === "order-history") initOrderHistoryPage();
-  if (page === "cart") renderCartPage();
-  if (page === "auth") initAuthPage();
+
+  let uiInitialized = false;
+  const { onAuthStateChanged } = await import(
+    "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+  );
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      await syncFirestoreUserProfileToLocalStorage(user);
+    } else {
+      clearAuthLocalStorage();
+    }
+
+    // Initialize UI once after we know whether the user is signed in.
+    if (!uiInitialized) {
+      initSignupModalGlobal();
+
+      if (page === "home") {
+        initHeroParallax();
+        initHomePage();
+      }
+      if (page === "menu") initMenuPage();
+      if (page === "vegetarian") initCategoryPage("vegetarian");
+      if (page === "nonveg") initCategoryPage("nonveg");
+      if (page === "beverages") initCategoryPage("beverages");
+      if (page === "breakfast") initCategoryPage("breakfast");
+
+      if (page === "order-history") {
+        if (user) {
+          initOrderHistoryPage();
+        } else {
+          // Guard: open login modal instead of redirecting.
+          if (typeof window.openLoginModal === "function") window.openLoginModal();
+          const emptyRoot = document.getElementById("order-history-empty");
+          if (emptyRoot) {
+            emptyRoot.textContent = "Please log in to view your order history.";
+            emptyRoot.classList.remove("is-hidden");
+          }
+        }
+      }
+
+      if (page === "cart") renderCartPage();
+      if (page === "auth") {
+        initAuthPage();
+      }
+
+      uiInitialized = true;
+    } else if (page === "order-history" && user) {
+      // If user signs in while staying on the page, refresh history.
+      initOrderHistoryPage();
+    }
+  });
 });
 
