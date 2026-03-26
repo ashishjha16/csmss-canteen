@@ -147,7 +147,7 @@ const MENU_DATA = {
       price: 35,
       description: "Steamed rice idlis served with hot sambar & chutney.",
       image:
-        "https://images.pexels.com/photos/14372675/pexels-photo-14372675.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/idli.png",
     },
     {
       id: "masala-dosa",
@@ -163,7 +163,7 @@ const MENU_DATA = {
       price: 25,
       description: "Light Maharashtrian flattened rice with onions & peanuts.",
       image:
-        "https://images.pexels.com/photos/14372691/pexels-photo-14372691.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/kanda-poha.jpeg",
     },
   ],
   snacks: [
@@ -173,7 +173,7 @@ const MENU_DATA = {
       price: 15,
       description: "Crispy pastry stuffed with spiced potato filling.",
       image:
-        "https://images.pexels.com/photos/14372671/pexels-photo-14372671.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/veg samosa.png",
     },
     {
       id: "sandwich",
@@ -189,7 +189,7 @@ const MENU_DATA = {
       price: 50,
       description: "Buttery pav served with spicy mashed vegetable curry.",
       image:
-        "https://images.pexels.com/photos/4611421/pexels-photo-4611421.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/pav bhaji.png",
     },
     {
       id: "noodles",
@@ -215,7 +215,7 @@ const MENU_DATA = {
       price: 100,
       description: "Paneer curry, dal, rice, chapati and accompaniments.",
       image:
-        "https://images.pexels.com/photos/888457/pexels-photo-888457.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/paneer thali.avif",
     },
     {
       id: "fried-rice",
@@ -223,7 +223,7 @@ const MENU_DATA = {
       price: 60,
       description: "Indo-Chinese style fried rice with vegetables.",
       image:
-        "https://images.pexels.com/photos/14375974/pexels-photo-14375974.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/veg fride rice.webp",
     },
   ],
   beverages: [
@@ -233,7 +233,7 @@ const MENU_DATA = {
       price: 10,
       description: "Hot Indian spiced tea.",
       image:
-        "https://images.pexels.com/photos/1793035/pexels-photo-1793035.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "images/masala tea.avif",
     },
     {
       id: "coffee",
@@ -261,7 +261,7 @@ const NON_VEG_ITEMS = [
     price: 90,
     description: "Juicy chicken wrapped with fresh veggies in a soft roll.",
     image:
-      "https://images.pexels.com/photos/4958792/pexels-photo-4958792.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "images/chicken roll.png",
   },
   {
     id: "chicken-burger",
@@ -269,7 +269,7 @@ const NON_VEG_ITEMS = [
     price: 110,
     description: "Crispy chicken patty burger with lettuce and mayo.",
     image:
-      "https://images.pexels.com/photos/1639562/pexels-photo-1639562.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "images/chicken burger.webp",
   },
   {
     id: "egg-sandwich",
@@ -277,7 +277,7 @@ const NON_VEG_ITEMS = [
     price: 55,
     description: "Toasted sandwich filled with spiced egg and fresh greens.",
     image:
-      "https://images.pexels.com/photos/4109996/pexels-photo-4109996.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "images/egg sandwich.png",
   },
   {
     id: "chicken-sandwich",
@@ -285,7 +285,7 @@ const NON_VEG_ITEMS = [
     price: 85,
     description: "Grilled chicken sandwich with creamy dressing.",
     image:
-      "https://images.pexels.com/photos/1600727/pexels-photo-1600727.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "images/chicken sandwich.webp",
   },
   {
     id: "bread-omelette",
@@ -293,7 +293,7 @@ const NON_VEG_ITEMS = [
     price: 40,
     description: "Classic college favorite with masala omelette and bread.",
     image:
-      "https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "images/bread-omelette.webp",
   },
 ];
 
