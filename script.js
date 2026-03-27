@@ -452,6 +452,48 @@ const MENU_DATA = {
       description: "Buttery pav served with spicy mashed vegetable curry.",
       image:
         "images/pav bhaji.png",
+    },    {
+      id: "pav-bhaji",
+      name: "Pav Bhaji",
+      price: 50,
+      description: "Buttery pav served with spicy mashed vegetable curry.",
+      image:
+        "images/pav bhaji.png",
+    },    {
+      id: "pav-bhaji",
+      name: "Pav Bhaji",
+      price: 50,
+      description: "Buttery pav served with spicy mashed vegetable curry.",
+      image:
+        "images/pav bhaji.png",
+    },    {
+      id: "pav-bhaji",
+      name: "Pav Bhaji",
+      price: 50,
+      description: "Buttery pav served with spicy mashed vegetable curry.",
+      image:
+        "images/pav bhaji.png",
+    },    {
+      id: "pav-bhaji",
+      name: "Pav Bhaji",
+      price: 50,
+      description: "Buttery pav served with spicy mashed vegetable curry.",
+      image:
+        "images/pav bhaji.png",
+    },    {
+      id: "pav-bhaji",
+      name: "Pav Bhaji",
+      price: 50,
+      description: "Buttery pav served with spicy mashed vegetable curry.",
+      image:
+        "images/pav bhaji.png",
+    },    {
+      id: "pav-bhaji",
+      name: "Pav Bhaji",
+      price: 50,
+      description: "Buttery pav served with spicy mashed vegetable curry.",
+      image:
+        "images/pav bhaji.png",
     },
     {
       id: "noodles",
@@ -526,6 +568,41 @@ const NON_VEG_ITEMS = [
       "images/chicken roll.png",
   },
   {
+    id: "chicken-burger",
+    name: "Chicken Burger",
+    price: 110,
+    description: "Crispy chicken patty burger with lettuce and mayo.",
+    image:
+      "images/chicken burger.webp",
+  },  {
+    id: "chicken-burger",
+    name: "Chicken Burger",
+    price: 110,
+    description: "Crispy chicken patty burger with lettuce and mayo.",
+    image:
+      "images/chicken burger.webp",
+  },  {
+    id: "chicken-burger",
+    name: "Chicken Burger",
+    price: 110,
+    description: "Crispy chicken patty burger with lettuce and mayo.",
+    image:
+      "images/chicken burger.webp",
+  },  {
+    id: "chicken-burger",
+    name: "Chicken Burger",
+    price: 110,
+    description: "Crispy chicken patty burger with lettuce and mayo.",
+    image:
+      "images/chicken burger.webp",
+  },  {
+    id: "chicken-burger",
+    name: "Chicken Burger",
+    price: 110,
+    description: "Crispy chicken patty burger with lettuce and mayo.",
+    image:
+      "images/chicken burger.webp",
+  },  {
     id: "chicken-burger",
     name: "Chicken Burger",
     price: 110,
@@ -2076,6 +2153,7 @@ function bindMenuButtons(root) {
 function initHeroParallax() {
   const hero = document.querySelector('[data-hero-parallax="true"]');
   const bgImg = hero?.querySelector('[data-hero-bg="true"]');
+  const overlay = hero?.querySelector(".hero-overlay");
   if (!hero || !bgImg) return;
 
   // Respect reduced motion preferences.
@@ -2092,6 +2170,10 @@ function initHeroParallax() {
 
   bgImg.style.willChange = "transform";
   bgImg.style.transformOrigin = "center center";
+  if (overlay) {
+    overlay.style.willChange = "transform";
+    overlay.style.transformOrigin = "center center";
+  }
 
   const getSettings = () => {
     const isMobile = window.innerWidth < 768;
@@ -2114,6 +2196,7 @@ function initHeroParallax() {
     if (!isActive) {
       if (lastTransform !== "") {
         bgImg.style.transform = "";
+        if (overlay) overlay.style.transform = "";
         lastTransform = "";
       }
       return;
@@ -2127,6 +2210,7 @@ function initHeroParallax() {
     const nextTransform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
     if (nextTransform !== lastTransform) {
       bgImg.style.transform = nextTransform;
+      if (overlay) overlay.style.transform = nextTransform;
       lastTransform = nextTransform;
     }
   };
@@ -2192,20 +2276,34 @@ function initHomePage() {
 
 function initMenuPage() {
   const categoryRoot = document.getElementById("menu-category-nav");
-  const map = {
-    breakfast: "menu-breakfast",
-    snacks: "menu-snacks",
-    lunch: "menu-lunch",
-    beverages: "menu-beverages",
-  };
-  Object.entries(map).forEach(([key, id]) => {
+
+  // Menu page should only show small random previews.
+  const maxPreviewItems = 4;
+  function pickRandomItems(list, n) {
+    const arr = Array.isArray(list) ? [...list] : [];
+    // Fisher-Yates shuffle (small arrays, fine to do on load).
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.slice(0, n);
+  }
+
+  const previews = [
+    { key: "breakfast", id: "menu-breakfast" },
+    { key: "snacks", id: "menu-snacks" },
+    { key: "beverages", id: "menu-beverages" },
+  ];
+
+  previews.forEach(({ key, id }) => {
     const root = document.getElementById(id);
     if (!root) return;
-    MENU_DATA[key].forEach((item) => {
-      const card = createMenuCard(item);
-      root.appendChild(card);
-    });
+    root.innerHTML = "";
+    const items = MENU_DATA[key] || [];
+    const chosen = pickRandomItems(items, maxPreviewItems);
+    chosen.forEach((item) => root.appendChild(createMenuCard(item)));
   });
+
   if (categoryRoot) {
     renderCategoryNavCards(categoryRoot);
   }
