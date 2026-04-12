@@ -6,6 +6,12 @@ const USER_UPDATED_EVENT = "csmss-user-updated";
 const ORDERS_KEY = "csmss_canteen_order_history";
 const ORDER_HISTORY_UPDATED_EVENT = "csmss-order-history-updated";
 
+/** Razorpay Checkout (test) — amount charged in INR via Razorpay modal */
+const RAZORPAY_KEY_ID = "rzp_test_ScWPwLjFjmseUI";
+
+/** Firestore `menuItems` merged into browsing/cart (loaded once per page load). */
+let FIRESTORE_MENU_ITEMS = [];
+
 // Firebase (Auth + Firestore) - initialized once via cached services.
 const firebaseConfig = {
   apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
@@ -45,6 +51,9 @@ async function getFirebaseServices() {
 
   return firebaseServicesPromise;
 }
+
+// Staff dashboard (canteen-dashboard.js) reuses the same Firebase init.
+window.__csmssGetFirebaseServices = getFirebaseServices;
 
 function getAuthUserUid() {
   return auth?.currentUser?.uid || "";
@@ -208,6 +217,30 @@ function getCartTotals(items) {
 
 function formatCurrency(value) {
   return `₹${value.toFixed(0)}`;
+}
+
+function loadRazorpayCheckoutScript() {
+  return new Promise((resolve, reject) => {
+    if (typeof window.Razorpay === "function") {
+      resolve();
+      return;
+    }
+    const existing = document.querySelector('script[data-razorpay-checkout="true"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () =>
+        reject(new Error("Razorpay script failed to load"))
+      );
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.async = true;
+    s.dataset.razorpayCheckout = "true";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Razorpay script failed to load"));
+    document.body.appendChild(s);
+  });
 }
 
 function escapeHtml(str) {
@@ -667,8 +700,8 @@ const CATEGORY_NAV = [
   },
 ];
 
-// Expose flattened list for suggestions
-const ALL_ITEMS = [
+// Expose flattened list for suggestions (static menu only)
+const ALL_ITEMS_STATIC = [
   ...MENU_DATA.breakfast,
   ...MENU_DATA.snacks,
   ...MENU_DATA.lunch,
@@ -676,16 +709,69 @@ const ALL_ITEMS = [
   ...NON_VEG_ITEMS,
 ];
 
+function getMergedMenuItemsList() {
+  return [...FIRESTORE_MENU_ITEMS, ...ALL_ITEMS_STATIC];
+}
+
+async function loadFirestoreMenuItems() {
+  FIRESTORE_MENU_ITEMS = [];
+  try {
+    await getFirebaseServices();
+    const { collection, getDocs } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+    );
+    const snap = await getDocs(collection(db, "menuItems"));
+    FIRESTORE_MENU_ITEMS = snap.docs
+      .map((d) => {
+        const data = d.data() || {};
+        return {
+          id: d.id,
+          name: String(data.name || "").trim(),
+          price: Number(data.price) || 0,
+          description: String(data.description || ""),
+          image: String(data.image || ""),
+          category: String(data.category || "").trim(),
+          isAvailable: data.isAvailable !== false,
+        };
+      })
+      .filter((it) => it.name && it.isAvailable !== false);
+  } catch (e) {
+    console.warn("Could not load menuItems from Firestore:", e);
+    FIRESTORE_MENU_ITEMS = [];
+  }
+}
+
+function firestoreItemsForCategory(categoryKey) {
+  const labels = {
+    breakfast: ["Breakfast"],
+    snacks: ["Snacks"],
+    lunch: ["Lunch"],
+    beverages: ["Beverages"],
+    nonveg: ["Non-Veg", "Non Veg", "Nonveg"],
+    vegetarian: ["Vegetarian"],
+  };
+  const allowed = new Set(
+    (labels[categoryKey] || []).map((x) => String(x).trim().toLowerCase())
+  );
+  return FIRESTORE_MENU_ITEMS.filter((item) =>
+    allowed.has(String(item.category || "").trim().toLowerCase())
+  );
+}
+
 function getItemsByCategoryKey(categoryKey) {
-  if (categoryKey === "breakfast") return MENU_DATA.breakfast;
-  if (categoryKey === "beverages") return MENU_DATA.beverages;
-  if (categoryKey === "nonveg") return NON_VEG_ITEMS;
+  const fs = firestoreItemsForCategory(categoryKey);
+  if (categoryKey === "breakfast") return [...fs, ...MENU_DATA.breakfast];
+  if (categoryKey === "snacks") return [...fs, ...MENU_DATA.snacks];
+  if (categoryKey === "lunch") return [...fs, ...MENU_DATA.lunch];
+  if (categoryKey === "beverages") return [...fs, ...MENU_DATA.beverages];
+  if (categoryKey === "nonveg") return [...fs, ...NON_VEG_ITEMS];
   if (categoryKey === "vegetarian") {
-    return [...MENU_DATA.snacks, ...MENU_DATA.lunch, MENU_DATA.breakfast[1]].filter(
+    const staticVeg = [...MENU_DATA.snacks, ...MENU_DATA.lunch, MENU_DATA.breakfast[1]].filter(
       Boolean
     );
+    return [...fs, ...staticVeg];
   }
-  return [];
+  return fs;
 }
 
 function renderCategoryNavCards(root) {
@@ -707,10 +793,16 @@ function renderCategoryNavCards(root) {
   });
 }
 
+function findMenuItemByIdOrName(itemId) {
+  const list = getMergedMenuItemsList();
+  return (
+    list.find((x) => x.id === itemId) ||
+    list.find((x) => x.name === itemId)
+  );
+}
+
 function addToCart(itemId) {
-  const item =
-    ALL_ITEMS.find((x) => x.id === itemId) ||
-    ALL_ITEMS.find((x) => x.name === itemId);
+  const item = findMenuItemByIdOrName(itemId);
   if (!item) return;
 
   const cart = readCart();
@@ -2232,18 +2324,21 @@ function initHomePage() {
   const snacksRoot = document.getElementById("home-snacks");
   const categoryRoot = document.getElementById("home-category-nav");
   if (specialsRoot) {
+    const bf = getItemsByCategoryKey("breakfast");
+    const ln = getItemsByCategoryKey("lunch");
+    const bev = getItemsByCategoryKey("beverages");
     const specials = [
-      MENU_DATA.breakfast[1],
-      MENU_DATA.lunch[0],
-      MENU_DATA.beverages[1],
-    ];
+      bf[1] || bf[0],
+      ln[0],
+      bev[1] || bev[0],
+    ].filter(Boolean);
     specials.forEach((item) => {
       const card = createMenuCard(item);
       specialsRoot.appendChild(card);
     });
   }
   if (snacksRoot) {
-    MENU_DATA.snacks.slice(0, 4).forEach((item) => {
+    getItemsByCategoryKey("snacks").slice(0, 4).forEach((item) => {
       const card = document.createElement("article");
       card.className = "snack-card";
       card.innerHTML = `
@@ -2299,7 +2394,7 @@ function initMenuPage() {
     const root = document.getElementById(id);
     if (!root) return;
     root.innerHTML = "";
-    const items = MENU_DATA[key] || [];
+    const items = getItemsByCategoryKey(key) || [];
     const chosen = pickRandomItems(items, maxPreviewItems);
     chosen.forEach((item) => root.appendChild(createMenuCard(item)));
   });
@@ -2678,10 +2773,6 @@ function renderCartPage() {
           return;
         }
 
-        const { addDoc, collection } = await import(
-          "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
-        );
-
         const totals = getCartTotals(cart);
         const items = cart.map((i) => ({
           id: i.id,
@@ -2692,23 +2783,74 @@ function renderCartPage() {
             (Number(i.price) || 0) * (Number(i.quantity) || 0),
         }));
 
-        await addDoc(collection(db, "orders"), {
-          uid: user.uid,
-          items,
-          totalAmount: totals.total,
-          status: "completed",
-          createdAt: new Date().toISOString(),
-        });
+        const persistOrder = async (paymentResponse) => {
+          const { addDoc, collection } = await import(
+            "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+          );
+          await addDoc(collection(db, "orders"), {
+            uid: user.uid,
+            items,
+            totalAmount: totals.total,
+            status: "placed",
+            paymentStatus: "paid",
+            razorpayPaymentId: String(
+              paymentResponse?.razorpay_payment_id || ""
+            ),
+            createdAt: new Date().toISOString(),
+          });
+          writeCart([]);
+          updateCartBadges();
+          closeCheckout();
+          refresh();
+          showMiniToast("Order placed! Await canteen confirmation.");
+          window.dispatchEvent(new Event(ORDER_HISTORY_UPDATED_EVENT));
+        };
 
-        writeCart([]);
-        updateCartBadges();
-        closeCheckout();
-        refresh();
-        showMiniToast("Order confirmed!");
-        window.dispatchEvent(new Event(ORDER_HISTORY_UPDATED_EVENT));
+        try {
+          await loadRazorpayCheckoutScript();
+        } catch (loadErr) {
+          console.error(loadErr);
+          alert("Could not load Razorpay checkout. Check your connection.");
+          return;
+        }
+
+        const checkoutEmail = document.getElementById("checkout-email");
+        const checkoutPhone = document.getElementById("checkout-phone");
+
+        const options = {
+          key: RAZORPAY_KEY_ID,
+          amount: Math.max(100, Math.round(Number(totals.total) * 100)),
+          currency: "INR",
+          name: "CSMSS Canteen",
+          description: `Food order (${items.length} items)`,
+          handler: async function (response) {
+            try {
+              await persistOrder(response);
+            } catch (err) {
+              console.error("Failed saving order after payment:", err);
+              alert(
+                "Payment succeeded but saving the order failed. Contact support with your payment ID: " +
+                  (response?.razorpay_payment_id || "")
+              );
+            }
+          },
+          prefill: {
+            email: String(checkoutEmail?.value || "").trim(),
+            contact: String(checkoutPhone?.value || "")
+              .replace(/\D+/g, "")
+              .slice(0, 10),
+          },
+          theme: { color: "#12422e" },
+        };
+
+        const rz = new window.Razorpay(options);
+        rz.on("payment.failed", () => {
+          showMiniToast("Payment failed or cancelled");
+        });
+        rz.open();
       } catch (err) {
-        console.error("Failed saving order:", err);
-        alert("Error placing order: " + (err?.message || "Unknown error"));
+        console.error("Checkout error:", err);
+        alert("Error: " + (err?.message || "Unknown error"));
       }
     });
   }
@@ -2731,6 +2873,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Ensure Firebase services are ready before we attempt auth/order queries.
   await getFirebaseServices();
+  await loadFirestoreMenuItems();
   const page = document.body.getAttribute("data-page");
 
   let uiInitialized = false;
@@ -2778,10 +2921,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         initAuthPage();
       }
 
+      if (page === "canteen-dashboard" && typeof window.initCanteenDashboard === "function") {
+        window.initCanteenDashboard();
+      }
+
       uiInitialized = true;
     } else if (page === "order-history" && user) {
       // If user signs in while staying on the page, refresh history.
       initOrderHistoryPage();
+    } else if (page === "canteen-dashboard" && user && typeof window.initCanteenDashboard === "function") {
+      window.initCanteenDashboard();
     }
   });
 });

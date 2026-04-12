@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="logo.png" />
+    <title>CSMSS Canteen | Kitchen Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyXlQfTUVIWgOtGPp9-PSBhUuBxHgggHo",
+      authDomain: "csmss-canteen-96d28.firebaseapp.com",
+      projectId: "csmss-canteen-96d28",
+      storageBucket: "csmss-canteen-96d28.firebasestorage.app",
+      messagingSenderId: "541374142906",
+      appId: "1:541374142906:web:8112606f02edbd6eada583",
+      measurementId: "G-JBD9TPTXET",
+    };
+    const app = initializeApp(firebaseConfig);
+    getAnalytics(app);
+  </script>
+  <body class="page page--bg-mint" data-page="canteen-dashboard">
+    <header class="site-header site-header--dark">
+      <nav class="site-nav">
+        <a href="index.html" class="nav-brand">
+          <div class="nav-brand__logo-wrap">
+            <img src="images/logo.png" alt="CanteenCo Logo" class="logo-img" />
+          </div>
+          <div class="nav-brand__text nav-brand__text--gold">
+            <span class="nav-brand__title">CSMSS Canteen</span>
+            <span class="nav-brand__tagline">Kitchen • Staff</span>
+          </div>
+        </a>
+
+        <div class="nav-actions" data-header-actions>
+          <div class="nav-links-desktop nav-links-desktop--gold">
+            <a href="index.html">Home</a>
+            <a href="menu.html">Menu</a>
+            <a href="cart.html">Cart</a>
+            <a href="order-history.html">Order History</a>
+          </div>
+
+          <a href="cart.html" class="cart-icon-btn" aria-label="Shopping cart">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218a1.5 1.5 0 001.45-1.12l.729-2.7A1.5 1.5 0 0014.25 6H4.5a1.5 1.5 0 00-1.5 1.5v6.75a1.5 1.5 0 002.25 1.5z" />
+            </svg>
+            <span data-cart-quantity class="cart-badge">0</span>
+          </a>
+
+          <button type="button" id="mobile-menu-toggle" class="nav-menu-toggle" aria-label="Toggle navigation">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      <div id="mobile-menu" class="is-hidden">
+        <div class="mobile-menu-inner">
+          <a href="index.html" class="mobile-menu-link">Home</a>
+          <a href="menu.html" class="mobile-menu-link">Menu</a>
+          <a href="cart.html" class="mobile-menu-link">Cart</a>
+          <a href="order-history.html" class="mobile-menu-link">Order History</a>
+          <a href="cart.html" class="mobile-menu-cart">
+            <span>Cart</span>
+            <span id="mobile-cart-count" class="mobile-menu-cart-count">0</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content staff-page">
+      <section class="staff-hero">
+        <div class="container">
+          <p class="staff-hero__badge">Canteen operations</p>
+          <h1 class="staff-hero__title">Kitchen dashboard</h1>
+          <p class="staff-hero__lead">
+            Manage the live menu and mark paid orders as completed. Customers see <strong>Completed</strong> orders in
+            <a href="order-history.html">Order History</a> after you confirm here.
+          </p>
+        </div>
+      </section>
+
+      <div id="staff-dashboard-root" class="container staff-dashboard">
+        <div id="staff-access-banner" class="staff-access-banner is-hidden" role="status"></div>
+        <div class="staff-dashboard-inner">
+        <div class="staff-stats">
+          <article class="staff-stat-card">
+            <p class="staff-stat-card__label">Live orders</p>
+            <p id="staff-stat-live" class="staff-stat-card__value">0</p>
+            <p class="staff-stat-card__hint">Status: placed (after Razorpay)</p>
+          </article>
+          <article class="staff-stat-card">
+            <p class="staff-stat-card__label">Menu items (Firestore)</p>
+            <p id="staff-stat-menu" class="staff-stat-card__value">0</p>
+            <p class="staff-stat-card__hint">Shown on site when available</p>
+          </article>
+        </div>
+
+        <div class="staff-panels">
+          <section class="staff-panel">
+            <div class="staff-panel__head">
+              <h2>Add food item</h2>
+              <p class="hint-text">Stored in <code>menuItems</code>. Category must match site sections.</p>
+            </div>
+            <form id="staff-add-item-form" class="staff-form">
+              <div class="staff-form__grid">
+                <div class="form-field">
+                  <label for="staff-item-name">Name *</label>
+                  <input id="staff-item-name" class="input-field" required placeholder="e.g. Samosa" />
+                </div>
+                <div class="form-field">
+                  <label for="staff-item-price">Price (₹) *</label>
+                  <input id="staff-item-price" class="input-field" type="number" min="1" step="1" required />
+                </div>
+                <div class="form-field">
+                  <label for="staff-item-category">Category *</label>
+                  <select id="staff-item-category" class="input-field" required>
+                    <option value="">Select</option>
+                    <option>Breakfast</option>
+                    <option>Snacks</option>
+                    <option>Lunch</option>
+                    <option>Beverages</option>
+                    <option>Non-Veg</option>
+                    <option>Vegetarian</option>
+                  </select>
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label for="staff-item-desc">Description</label>
+                  <input id="staff-item-desc" class="input-field" placeholder="Optional" />
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1">
+                  <label for="staff-item-image">Image URL</label>
+                  <input id="staff-item-image" class="input-field" type="url" placeholder="https://… or images/…" />
+                </div>
+                <label class="staff-check">
+                  <input id="staff-item-available" type="checkbox" checked />
+                  <span>Available on menu</span>
+                </label>
+              </div>
+              <button type="submit" class="btn btn--primary staff-form__submit">Add item</button>
+            </form>
+          </section>
+
+          <section class="staff-panel">
+            <div class="staff-panel__head">
+              <h2>Menu items</h2>
+              <p class="hint-text">Edit, toggle availability, or delete.</p>
+            </div>
+            <div class="staff-table-wrap">
+              <table class="staff-table" id="staff-menu-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Category</th>
+                    <th>Available</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <section class="staff-panel staff-panel--wide">
+          <div class="staff-panel__head">
+            <h2>Live orders</h2>
+            <p class="hint-text">Real-time updates. Mark completed when food is ready / handed over.</p>
+          </div>
+          <div id="staff-live-orders" class="staff-orders-grid"></div>
+        </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__bottom">
+        <a href="index.html">← Back to site</a>
+        · Kitchen dashboard · CSMSS Canteen
+      </div>
+    </footer>
+
+    <!-- staff init must register before script.js DOMContentLoaded -->
+    <script src="canteen-dashboard.js" defer></script>
+    <script src="script.js" defer></script>
+  </body>
+</html>

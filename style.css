@@ -2641,3 +2641,287 @@ button {
   padding: 0.35rem 0.65rem;
   font-size: 0.68rem;
 }
+
+/* ---------- Canteen staff dashboard ---------- */
+.staff-page .container {
+  max-width: var(--max-w-6xl);
+}
+
+.staff-hero {
+  padding: 2rem 0 1rem;
+}
+
+.staff-hero__badge {
+  display: inline-block;
+  margin: 0 0 0.5rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(18, 66, 46, 0.1);
+}
+
+.staff-hero__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-zinc-900);
+}
+
+.staff-hero__lead {
+  margin: 0.5rem 0 0;
+  max-width: 40rem;
+  color: var(--color-zinc-600);
+  font-size: 0.9rem;
+}
+
+.staff-hero__lead a {
+  color: var(--color-primary-mid);
+  text-decoration: underline;
+}
+
+.staff-access-banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  background: #fff1f2;
+  color: #9f1239;
+  font-size: 0.875rem;
+}
+
+.staff-dashboard-inner.is-hidden {
+  display: none !important;
+}
+
+.staff-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.staff-stat-card {
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-zinc-200);
+  background: var(--color-white);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.staff-stat-card__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-zinc-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.staff-stat-card__value {
+  margin: 0.35rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.staff-stat-card__hint {
+  margin: 0.35rem 0 0;
+  font-size: 11px;
+  color: var(--color-zinc-500);
+}
+
+.staff-panels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 960px) {
+  .staff-panels {
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.staff-panel {
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-zinc-200);
+  background: var(--color-white);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.staff-panel--wide {
+  margin-top: 1.25rem;
+}
+
+.staff-panel__head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-zinc-900);
+}
+
+.staff-panel__head .hint-text {
+  margin: 0.35rem 0 0;
+}
+
+.staff-form__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 640px) {
+  .staff-form__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.staff-form__submit {
+  margin-top: 1rem;
+}
+
+.staff-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-zinc-700);
+}
+
+.staff-table-wrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-zinc-200);
+}
+
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.staff-table th,
+.staff-table td {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-zinc-100);
+}
+
+.staff-table th {
+  background: var(--color-zinc-50);
+  font-weight: 600;
+  color: var(--color-zinc-700);
+}
+
+.staff-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.btn--xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 11px;
+}
+
+.staff-btn--danger {
+  border-color: rgba(225, 29, 72, 0.35) !important;
+  color: #be123c !important;
+}
+
+.staff-orders-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 720px) {
+  .staff-orders-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.staff-order-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-zinc-200);
+  background: var(--color-zinc-50);
+  padding: 0.85rem 1rem;
+}
+
+.staff-order-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.staff-order-card__id {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-zinc-900);
+  word-break: break-all;
+}
+
+.staff-order-card__meta {
+  margin: 0.15rem 0 0;
+  font-size: 10px;
+  color: var(--color-zinc-500);
+}
+
+.staff-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  text-transform: capitalize;
+}
+
+.staff-badge--placed {
+  background: rgba(234, 179, 8, 0.2);
+  color: #a16207;
+}
+
+.staff-order-card__items {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--color-zinc-700);
+}
+
+.staff-order-card__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.staff-order-card__foot {
+  margin-top: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--color-zinc-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.btn--sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.staff-empty {
+  margin: 0;
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-zinc-600);
+}
