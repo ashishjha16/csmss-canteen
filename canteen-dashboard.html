@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="logo.png" />
+    <link rel="icon" type="image/png" href="images/logo.png" />
     <title>CSMSS Canteen | Kitchen Dashboard</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -23,6 +23,16 @@
     getAnalytics(app);
   </script>
   <body class="page page--bg-mint" data-page="canteen-dashboard">
+    <script>
+      // Block direct access: kitchen UI is only for admin session (separate from student/staff Firebase login).
+      try {
+        if (sessionStorage.getItem("csmss_canteen_admin_ok") !== "1") {
+          window.location.replace("admin-login.html");
+        }
+      } catch {
+        window.location.replace("admin-login.html");
+      }
+    </script>
     <header class="site-header site-header--dark">
       <nav class="site-nav">
         <a href="index.html" class="nav-brand">
@@ -41,6 +51,9 @@
             <a href="menu.html">Menu</a>
             <a href="cart.html">Cart</a>
             <a href="order-history.html">Order History</a>
+            <button type="button" class="link-quiet" data-action="admin-logout" style="background: none; border: 0; cursor: pointer; color: inherit; font: inherit; text-decoration: underline">
+              Admin logout
+            </button>
           </div>
 
           <a href="cart.html" class="cart-icon-btn" aria-label="Shopping cart">
@@ -64,6 +77,9 @@
           <a href="menu.html" class="mobile-menu-link">Menu</a>
           <a href="cart.html" class="mobile-menu-link">Cart</a>
           <a href="order-history.html" class="mobile-menu-link">Order History</a>
+          <button type="button" class="mobile-menu-link" data-action="admin-logout" style="width: 100%; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit">
+            Admin logout
+          </button>
           <a href="cart.html" class="mobile-menu-cart">
             <span>Cart</span>
             <span id="mobile-cart-count" class="mobile-menu-cart-count">0</span>
@@ -91,7 +107,7 @@
           <article class="staff-stat-card">
             <p class="staff-stat-card__label">Live orders</p>
             <p id="staff-stat-live" class="staff-stat-card__value">0</p>
-            <p class="staff-stat-card__hint">Status: placed (after Razorpay)</p>
+            <p class="staff-stat-card__hint">Pending / placed (after Razorpay)</p>
           </article>
           <article class="staff-stat-card">
             <p class="staff-stat-card__label">Menu items (Firestore)</p>

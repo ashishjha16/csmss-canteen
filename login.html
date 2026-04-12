@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="logo.png" />
+    <link rel="icon" type="image/png" href="images/logo.png" />
     <title>CSMSS Canteen | Login / Registration</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -86,8 +86,8 @@
                   <div class="text-sm">
                     <p style="margin: 0; font-weight: 600; color: var(--color-zinc-900)">Quick checks</p>
                     <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem; color: var(--color-zinc-600)">
-                      <li>Enter your email and password.</li>
-                      <li>Phone is optional on this page.</li>
+                      <li>Use one field for <strong>email or 10-digit phone</strong>, then your password.</li>
+                      <li>Phone login looks up the email linked to your profile in Firestore.</li>
                     </ul>
                   </div>
                 </div>
@@ -106,24 +106,26 @@
                   </div>
 
                   <form id="auth-form" class="auth-form" novalidate>
-                    <div class="form-grid-auth">
-                      <div class="form-field">
-                        <label for="email">Email *</label>
-                        <input id="email" name="email" type="email" placeholder="Enter your email" class="input-field" required />
-                        <p class="form-error is-hidden" data-error-for="email"></p>
-                      </div>
-                      <div class="form-field">
-                        <label for="phone">Phone Number</label>
-                        <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="Optional (10-digit number)" class="input-field" />
-                        <p class="form-error is-hidden" data-error-for="phone"></p>
-                      </div>
+                    <div class="form-field">
+                      <label for="auth-login-identifier">Email or Phone Number *</label>
+                      <input
+                        id="auth-login-identifier"
+                        name="auth-login-identifier"
+                        type="text"
+                        autocomplete="username"
+                        class="input-field"
+                        required
+                        placeholder="Email or 10-digit phone"
+                      />
+                      <p class="form-error is-hidden" data-error-for="identifier"></p>
                     </div>
 
                     <div class="form-field">
                       <label for="password">Password *</label>
-                      <input id="password" name="password" type="password" class="input-field" required placeholder="Enter your password" />
+                      <input id="password" name="password" type="password" class="input-field" required placeholder="Enter your password" autocomplete="current-password" />
                       <p class="form-error is-hidden" data-error-for="password"></p>
                     </div>
+                    <p class="form-error is-hidden" data-error-for="login" style="margin-top: 0.25rem"></p>
 
                     <div style="padding-top: 0.5rem">
                       <button id="submitBtn" type="submit" class="btn-submit-auth">Submit</button>

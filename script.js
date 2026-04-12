@@ -332,6 +332,12 @@ function buildOrderRecordFromCart(cart) {
 
 function formatOrderDateTime(iso) {
   try {
+    if (iso && typeof iso.toDate === "function") {
+      return iso.toDate().toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+    }
     const d = new Date(iso);
     return d.toLocaleString(undefined, {
       dateStyle: "medium",
@@ -340,97 +346,6 @@ function formatOrderDateTime(iso) {
   } catch {
     return String(iso);
   }
-}
-
-async function fetchLastOrdersForUid(uid, limitCount = 5) {
-  if (!uid) return [];
-  try {
-    await getFirebaseServices();
-    const { collection, query, where, orderBy, limit, getDocs } = await import(
-      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
-    );
-    const q = query(
-      collection(db, "orders"),
-      where("uid", "==", uid),
-      orderBy("createdAt", "desc"),
-      limit(limitCount)
-    );
-    const snap = await getDocs(q);
-    const orders = snap.docs.map((d) => {
-      const data = d.data() || {};
-      return {
-        id: d.id,
-        createdAt: data.createdAt || "",
-        items: Array.isArray(data.items) ? data.items : [],
-        totalAmount: Number(data.totalAmount ?? data.total ?? 0) || 0,
-        status: String(data.status || "completed"),
-      };
-    });
-    // Only show completed orders (safety, even if we always store completed).
-    return orders.filter((o) => String(o.status).toLowerCase() === "completed");
-  } catch (e) {
-    console.error("Failed fetching last orders:", e);
-    return [];
-  }
-}
-
-async function renderLastOrdersInProfile(wrapper) {
-  const listRoot = wrapper.querySelector("[data-profile-last-orders-list]");
-  if (!listRoot) return;
-
-  const uid = getAuthUserUid();
-  if (!uid) {
-    listRoot.innerHTML =
-      '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">No orders yet</p>';
-    return;
-  }
-
-  listRoot.innerHTML =
-    '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">Loading…</p>';
-
-  const orders = await fetchLastOrdersForUid(uid, 5);
-  if (!orders.length) {
-    listRoot.innerHTML =
-      '<p class="text-muted" style="padding:0.25rem 0;font-size:0.75rem">No orders yet</p>';
-    return;
-  }
-
-  listRoot.innerHTML = orders
-    .map((order) => {
-      const items = Array.isArray(order.items) ? order.items : [];
-      return `
-        <div class="order-history-card">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
-            <p style="margin:0;font-size:11px;font-weight:600;color:var(--color-zinc-900)">${escapeHtml(
-              order.id
-            )}</p>
-            <p style="margin:0;font-size:10px;color:var(--color-zinc-500);white-space:nowrap">${escapeHtml(
-              formatOrderDateTime(order.createdAt)
-            )}</p>
-          </div>
-          <ul style="margin:0.5rem 0 0;padding:0;list-style:none;font-size:11px;color:var(--color-zinc-700)">
-            ${items
-              .map((it) => {
-                const qty = Number(it?.quantity ?? 0) || 0;
-                const lineTotal = Number(it?.lineTotal ?? 0) || 0;
-                return `
-                  <li style="display:flex;justify-content:space-between;gap:0.5rem">
-                    <span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${escapeHtml(
-                      it?.name || ""
-                    )} × ${escapeHtml(String(qty))}</span>
-                    <span style="flex-shrink:0;font-weight:500">${formatCurrency(lineTotal)}</span>
-                  </li>
-                `;
-              })
-              .join("")}
-          </ul>
-          <p style="margin:0.5rem 0 0;padding-top:0.5rem;border-top:1px solid rgba(228,228,231,0.8);font-size:11px;font-weight:600;color:var(--color-primary)">Total: ${formatCurrency(
-            order.totalAmount
-          )}</p>
-        </div>
-      `;
-    })
-    .join("");
 }
 
 // Basic menu data used across pages
@@ -869,18 +784,6 @@ function setupMobileNav() {
 }
 
 function initSignupModalGlobal() {
-  if (!initSignupModalGlobal._orderHistoryListener) {
-    initSignupModalGlobal._orderHistoryListener = true;
-    window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, () => {
-      // Refresh the "Last 5 Orders" preview inside any open profile dropdown.
-      document
-        .querySelectorAll('[data-profile-wrapper="true"]')
-        .forEach((wrapper) => {
-          renderLastOrdersInProfile(wrapper).catch(() => {});
-        });
-    });
-  }
-
   const SIGNUP_STORAGE_KEY = "csmss_canteen_signup_profiles";
   const modalId = "signup-modal";
   const loginModalId = "login-modal";
@@ -989,11 +892,6 @@ function initSignupModalGlobal() {
     setText('[data-profile-name="true"]', user.name);
     setText('[data-profile-phone="true"]', user.phone);
     setText('[data-profile-email="true"]', user.email);
-
-    // Fire-and-forget: renders the "Last 5 Orders" section for the logged-in user.
-    renderLastOrdersInProfile(wrapper).catch(() => {
-      // ignore UI refresh errors
-    });
   }
 
   function onlyDigits(value) {
@@ -1141,11 +1039,6 @@ function initSignupModalGlobal() {
               </div>
             </div>
 
-            <div class="order-history-block">
-              <p class="order-history-title">Last 5 Orders</p>
-              <div data-profile-last-orders-list class="order-history-list"></div>
-            </div>
-
             <a href="order-history.html" class="btn-secondary" style="width:100%;text-decoration:none;justify-content:center">
               View Order History
             </a>
@@ -1287,11 +1180,6 @@ function initSignupModalGlobal() {
                 <p class="profile-field-label">Email</p>
                 <p class="profile-field-value" data-profile-email="true">—</p>
               </div>
-            </div>
-
-            <div class="order-history-block">
-              <p class="order-history-title">Last 5 Orders</p>
-              <div data-profile-last-orders-list class="order-history-list"></div>
             </div>
 
             <a href="order-history.html" class="btn-secondary" style="width:100%;text-decoration:none;justify-content:center">
@@ -1529,7 +1417,7 @@ function initSignupModalGlobal() {
           <div class="signup-modal__header">
             <div>
               <p class="signup-modal__title">Login</p>
-              <p class="signup-modal__lead">Use email or phone plus password.</p>
+              <p class="signup-modal__lead">Enter email or phone and your password.</p>
             </div>
             <button
               type="button"
@@ -1544,32 +1432,18 @@ function initSignupModalGlobal() {
           </div>
 
           <form id="login-form" class="signup-form" novalidate>
-            <div class="signup-form__row2">
-              <div>
-                <label for="login-email" class="signup-label">Email</label>
+            <div class="signup-form__row2" style="grid-column: 1 / -1">
+              <div style="grid-column: 1 / -1">
+                <label for="login-identifier" class="signup-label">Email or Phone Number</label>
                 <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  autocomplete="email"
+                  id="login-identifier"
+                  name="identifier"
+                  type="text"
+                  autocomplete="username"
                   class="signup-input"
-                  placeholder="Enter your email"
+                  placeholder="Email or 10-digit phone"
                 />
-                <p class="signup-error is-hidden" data-error-for="email"></p>
-              </div>
-
-              <div>
-                <label for="login-phone" class="signup-label">Phone Number</label>
-                <input
-                  id="login-phone"
-                  name="phone"
-                  type="tel"
-                  inputmode="numeric"
-                  maxlength="10"
-                  class="signup-input"
-                  placeholder="10-digit number"
-                />
-                <p class="signup-error is-hidden" data-error-for="phone"></p>
+                <p class="signup-error is-hidden" data-error-for="identifier"></p>
               </div>
             </div>
 
@@ -1618,7 +1492,7 @@ function initSignupModalGlobal() {
     modal.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
 
-    const first = modal.querySelector("#login-email") || modal.querySelector("#login-phone");
+    const first = modal.querySelector("#login-identifier");
     if (first) first.focus();
   }
 
@@ -1679,7 +1553,7 @@ function initSignupModalGlobal() {
   }
 
   function clearLoginErrors(root) {
-    ["email", "phone", "password", "login"].forEach((k) => setFieldError(root, k, ""));
+    ["identifier", "password", "login"].forEach((k) => setFieldError(root, k, ""));
   }
 
   function bindLoginModalOnce() {
@@ -1688,8 +1562,7 @@ function initSignupModalGlobal() {
     modal.setAttribute("data-bound", "true");
 
     const form = modal.querySelector("#login-form");
-    const emailInput = modal.querySelector("#login-email");
-    const phoneInput = modal.querySelector("#login-phone");
+    const identifierInput = modal.querySelector("#login-identifier");
     const passwordInput = modal.querySelector("#login-password");
 
     function setFieldErrorForUI(key, message) {
@@ -1713,32 +1586,22 @@ function initSignupModalGlobal() {
       if (e.key === "Escape") closeLoginModal();
     });
 
-    if (phoneInput) {
-      phoneInput.addEventListener("input", () => {
-        phoneInput.value = onlyDigits(phoneInput.value).slice(0, 10);
-      });
-    }
-
     if (!form) return;
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       clearLoginErrors(modal);
 
-      const emailVal = String(emailInput?.value || "").trim();
-      const phoneDigits = onlyDigits(phoneInput?.value || "");
+      const rawId = String(identifierInput?.value || "").trim();
       const passwordVal = String(passwordInput?.value || "");
-
-      const hasEmail = !!emailVal;
-      const hasPhone = !!phoneDigits;
 
       if (!passwordVal) {
         setFieldErrorForUI("password", "Password is required.");
         return;
       }
 
-      if (!hasEmail && !hasPhone) {
-        setFieldErrorForUI("login", "Enter email or phone number");
+      if (!rawId) {
+        setFieldErrorForUI("identifier", "Enter email or phone number.");
         return;
       }
 
@@ -1749,12 +1612,15 @@ function initSignupModalGlobal() {
         );
 
         let loginEmail = "";
-
-        // Prefer email if both are present.
-        if (hasEmail) {
-          loginEmail = emailVal;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailRegex.test(rawId)) {
+          loginEmail = rawId;
         } else {
-          // Phone login: lookup user's email via Firestore.
+          const phoneDigits = onlyDigits(rawId);
+          if (phoneDigits.length !== 10) {
+            setFieldErrorForUI("identifier", "Enter a valid email or 10-digit phone.");
+            return;
+          }
           const { collection, query, where, limit, getDocs } = await import(
             "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
           );
@@ -1771,7 +1637,7 @@ function initSignupModalGlobal() {
         }
 
         if (!loginEmail) {
-          setFieldErrorForUI("login", "No account found with this phone number");
+          setFieldErrorForUI("login", "No account found with this phone number.");
           return;
         }
 
@@ -2061,46 +1927,17 @@ function initSignupModalGlobal() {
 
 function initAuthPage() {
   const form = document.getElementById("auth-form");
-  const studentFields = document.getElementById("student-fields");
   const success = document.getElementById("form-success");
   const footerYear = document.getElementById("footer-year");
-  const phone = document.getElementById("phone");
-  const fullName = document.getElementById("fullName");
-  const email = document.getElementById("email");
+  const identifierEl = document.getElementById("auth-login-identifier");
   const password = document.getElementById("password");
-  const branch = document.getElementById("branch");
-  const year = document.getElementById("year");
 
   if (footerYear) footerYear.textContent = String(new Date().getFullYear());
   if (auth?.currentUser) {
     return;
   }
 
-  // Keep auth flows in the shared modal (no redirects).
-  if (typeof window.openLoginModal === "function") {
-    window.openLoginModal();
-    return;
-  }
-
-  const roleInputs = Array.from(
-    document.querySelectorAll('input[name="role"]')
-  );
-
-  function getRole() {
-    const checked = roleInputs.find((r) => r.checked);
-    return checked ? checked.value : "";
-  }
-
-  function setStudentVisibility(isStudent) {
-    if (!studentFields) return;
-    if (isStudent) {
-      studentFields.setAttribute("aria-hidden", "false");
-      studentFields.classList.add("is-open");
-    } else {
-      studentFields.setAttribute("aria-hidden", "true");
-      studentFields.classList.remove("is-open");
-    }
-  }
+  // Dedicated login page: always bind this form (do not redirect to the global header modal).
 
   function setFieldError(fieldName, message) {
     const el = document.querySelector(`[data-error-for="${fieldName}"]`);
@@ -2115,65 +1952,31 @@ function initAuthPage() {
   }
 
   function clearErrors() {
-    ["fullName", "email", "password", "phone", "role", "branch", "year"].forEach(
-      (k) => setFieldError(k, "")
-    );
+    ["identifier", "password", "login"].forEach((k) => setFieldError(k, ""));
   }
 
   function onlyDigits(value) {
     return String(value || "").replace(/\D+/g, "");
   }
 
-  if (phone) {
-    phone.addEventListener("input", () => {
-      const digits = onlyDigits(phone.value).slice(0, 10);
-      phone.value = digits;
-    });
-  }
+  if (!form || !identifierEl || !password) return;
 
-  roleInputs.forEach((r) =>
-    r.addEventListener("change", () => {
-      const isStudent = getRole() === "Student";
-      setStudentVisibility(isStudent);
-      if (!isStudent) {
-        if (branch) branch.value = "";
-        if (year) year.value = "";
-        setFieldError("branch", "");
-        setFieldError("year", "");
-      }
-    })
-  );
-
-  setStudentVisibility(getRole() === "Student");
-
-  if (!form) return;
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (success) success.classList.add("is-hidden");
 
     clearErrors();
-    let ok = true;
+    const rawId = String(identifierEl.value || "").trim();
+    const passwordVal = String(password.value || "");
 
-    const emailVal = (email?.value || "").trim();
-    const passwordVal = String(password?.value || "");
-
-    if (!emailVal) {
-      ok = false;
-      setFieldError("email", "Email is required.");
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailVal)) {
-        ok = false;
-        setFieldError("email", "Please enter a valid email.");
-      }
+    if (!rawId) {
+      setFieldError("identifier", "Enter email or phone number.");
+      return;
     }
-
     if (!passwordVal) {
-      ok = false;
       setFieldError("password", "Password is required.");
+      return;
     }
-
-    if (!ok) return;
 
     try {
       await getFirebaseServices();
@@ -2181,17 +1984,46 @@ function initAuthPage() {
         "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
       );
 
+      let loginEmail = "";
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(rawId)) {
+        loginEmail = rawId;
+      } else {
+        const phoneDigits = onlyDigits(rawId);
+        if (phoneDigits.length !== 10) {
+          setFieldError("identifier", "Enter a valid email or 10-digit phone.");
+          return;
+        }
+        const { collection, query, where, limit, getDocs } = await import(
+          "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+        );
+        const q = query(
+          collection(db, "users"),
+          where("phone", "==", phoneDigits),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const data = snap.docs[0].data() || {};
+          loginEmail = String(data?.email || "").trim();
+        }
+      }
+
+      if (!loginEmail) {
+        setFieldError(
+          "login",
+          "No account found for this email or phone number."
+        );
+        return;
+      }
+
       const cred = await signInWithEmailAndPassword(
         auth,
-        emailVal,
+        loginEmail,
         passwordVal
       );
 
-      const synced = await syncFirestoreUserProfileToLocalStorage(cred.user);
-      if (!synced) {
-        alert("Your profile is missing in Firestore. Please sign up again.");
-        return;
-      }
+      await syncFirestoreUserProfileToLocalStorage(cred.user);
 
       window.dispatchEvent(new Event(USER_UPDATED_EVENT));
       if (success) success.classList.remove("is-hidden");
@@ -2202,6 +2034,9 @@ function initAuthPage() {
     }
   });
 }
+
+/** @type {null | (() => void)} */
+let orderHistoryUnsub = null;
 
 // Render helpers
 function createMenuCard(item) {
@@ -2431,48 +2266,76 @@ async function initOrderHistoryPage() {
     return;
   }
 
-  async function render() {
-    listRoot.innerHTML = "";
-    emptyRoot.classList.add("is-hidden");
-
+  if (orderHistoryUnsub) {
     try {
-      const { collection, query, where, orderBy, getDocs } = await import(
-        "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
-      );
-      const q = query(
-        collection(db, "orders"),
-        where("uid", "==", uid),
-        orderBy("createdAt", "desc")
-      );
-      const snap = await getDocs(q);
-      const orders = snap.docs
-        .map((d) => {
+      orderHistoryUnsub();
+    } catch {
+      // ignore
+    }
+    orderHistoryUnsub = null;
+  }
+
+  listRoot.innerHTML = "";
+  emptyRoot.classList.add("is-hidden");
+
+  try {
+    const { collection, query, where, orderBy, onSnapshot } = await import(
+      "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+    );
+    const q = query(
+      collection(db, "orders"),
+      where("uid", "==", uid),
+      orderBy("createdAt", "desc")
+    );
+
+    orderHistoryUnsub = onSnapshot(
+      q,
+      (snap) => {
+        listRoot.innerHTML = "";
+        const orders = snap.docs.map((d) => {
           const data = d.data() || {};
           return {
             id: d.id,
             createdAt: data.createdAt || "",
             items: Array.isArray(data.items) ? data.items : [],
             totalAmount: Number(data.totalAmount ?? 0) || 0,
-            status: String(data.status || ""),
+            status: String(data.status || "Pending"),
+            paymentStatus: String(data.paymentStatus || ""),
           };
-        })
-        .filter((o) => String(o.status).toLowerCase() === "completed");
+        });
 
-      if (!orders.length) {
-        emptyRoot.classList.remove("is-hidden");
-        return;
-      }
+        if (!orders.length) {
+          emptyRoot.textContent = "No orders yet.";
+          emptyRoot.classList.remove("is-hidden");
+          return;
+        }
 
-      orders.forEach((order) => {
-        const itemsList = Array.isArray(order.items) ? order.items : [];
-        const itemCount = itemsList.reduce(
-          (sum, it) => sum + (Number(it.quantity) || 0),
-          0
-        );
+        emptyRoot.classList.add("is-hidden");
 
-        const card = document.createElement("article");
-        card.className = "order-history-card";
-        card.innerHTML = `
+        orders.forEach((order) => {
+          const itemsList = Array.isArray(order.items) ? order.items : [];
+          const itemCount = itemsList.reduce(
+            (sum, it) => sum + (Number(it.quantity) || 0),
+            0
+          );
+          const st = String(order.status || "Pending");
+          const stLower = st.toLowerCase();
+          const statusColor =
+            stLower === "completed"
+              ? "var(--color-emerald-700)"
+              : stLower === "pending" || stLower === "placed"
+                ? "#a16207"
+                : "var(--color-zinc-700)";
+          const payLine =
+            order.paymentStatus &&
+            `<div class="summary-row summary-row--small" style="margin-top:0.15rem">
+              <span>Payment</span>
+              <span style="font-weight:600">${escapeHtml(order.paymentStatus)}</span>
+            </div>`;
+
+          const card = document.createElement("article");
+          card.className = "order-history-card";
+          card.innerHTML = `
           <div class="summary-row">
             <span style="font-weight:600;color:var(--color-zinc-900)">${escapeHtml(
               order.id || ""
@@ -2483,12 +2346,11 @@ async function initOrderHistoryPage() {
           </div>
           <div class="summary-row summary-row--small" style="margin-top:0.25rem">
             <span>Status</span>
-            <span style="font-weight:600;color:var(--color-emerald-700)">${escapeHtml(
-              String(order.status || "completed")
-            )}</span>
+            <span style="font-weight:600;color:${statusColor}">${escapeHtml(st)}</span>
           </div>
+          ${payLine || ""}
           <div class="summary-row summary-row--small">
-            <span>Items</span>
+            <span>Items (qty)</span>
             <span>${escapeHtml(String(itemCount))}</span>
           </div>
           <ul style="margin:0.625rem 0 0;padding:0;list-style:none">
@@ -2510,17 +2372,20 @@ async function initOrderHistoryPage() {
             <span>${formatCurrency(Number(order.totalAmount) || 0)}</span>
           </div>
         `;
-        listRoot.appendChild(card);
-      });
-    } catch (err) {
-      console.error("Failed rendering order history:", err);
-      emptyRoot.classList.remove("is-hidden");
-      return;
-    }
+          listRoot.appendChild(card);
+        });
+      },
+      (err) => {
+        console.error("Failed order history listener:", err);
+        emptyRoot.textContent =
+          "Could not load order history. Check Firestore rules / network.";
+        emptyRoot.classList.remove("is-hidden");
+      }
+    );
+  } catch (err) {
+    console.error("Failed rendering order history:", err);
+    emptyRoot.classList.remove("is-hidden");
   }
-
-  await render();
-  window.addEventListener(ORDER_HISTORY_UPDATED_EVENT, render);
 }
 
 function renderCartPage() {
@@ -2784,19 +2649,45 @@ function renderCartPage() {
         }));
 
         const persistOrder = async (paymentResponse) => {
-          const { addDoc, collection } = await import(
+          const { addDoc, collection, serverTimestamp } = await import(
             "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
           );
+          let profile = {};
+          try {
+            profile = JSON.parse(localStorage.getItem(AUTH_PROFILE_KEY) || "{}");
+          } catch {
+            profile = {};
+          }
+          const userName = String(
+            profile.fullName || user.displayName || "User"
+          ).trim();
+          const userTypeRaw = String(profile.role || "Student").toLowerCase();
+          const userType =
+            userTypeRaw === "staff" ? "staff" : "student";
+          const userPhone = String(profile.phone || "").replace(/\D+/g, "");
+          const userEmail = String(
+            profile.email || user.email || ""
+          ).trim();
+          const userIdentifier =
+            userEmail || (userPhone ? userPhone : String(user.uid));
+
           await addDoc(collection(db, "orders"), {
+            userId: user.uid,
             uid: user.uid,
+            userName,
+            userType,
+            userIdentifier,
+            userEmail,
+            userPhone,
             items,
             totalAmount: totals.total,
-            status: "placed",
-            paymentStatus: "paid",
+            paymentStatus: "Paid",
+            status: "Pending",
             razorpayPaymentId: String(
               paymentResponse?.razorpay_payment_id || ""
             ),
-            createdAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
+            completedAt: null,
           });
           writeCart([]);
           updateCartBadges();
@@ -2929,8 +2820,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (page === "order-history" && user) {
       // If user signs in while staying on the page, refresh history.
       initOrderHistoryPage();
-    } else if (page === "canteen-dashboard" && user && typeof window.initCanteenDashboard === "function") {
-      window.initCanteenDashboard();
     }
   });
 });

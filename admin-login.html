@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <title>CSMSS Canteen | Admin login</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="page page--bg-auth" data-page="admin-login">
+    <header class="site-header site-header--auth">
+      <nav class="site-nav">
+        <a href="index.html" class="nav-brand">
+          <div class="nav-brand__logo-wrap nav-brand__logo-wrap--tight">
+            <img src="images/logo.png" alt="CanteenCo Logo" class="logo-img" style="height: 2.25rem" />
+          </div>
+          <div class="nav-brand__text nav-brand__text--auth">
+            <span class="nav-brand__title">CSMSS Canteen</span>
+            <span class="nav-brand__tagline">Canteen admin</span>
+          </div>
+        </a>
+        <div class="nav-links-desktop nav-links-desktop--auth">
+          <a href="index.html">Home</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="main-content">
+      <section class="auth-section">
+        <div class="container">
+          <div class="auth-grid">
+            <div>
+              <p class="auth-intro-badge">Staff only</p>
+              <h1 class="auth-title">Canteen dashboard login</h1>
+              <p class="auth-lead">
+                This login is only for canteen staff. Students and staff ordering food should use the regular site login.
+              </p>
+            </div>
+
+            <div style="margin: 0 auto; width: 100%; max-width: var(--max-w-lg)">
+              <div class="auth-form-card">
+                <div class="auth-form-card__inner">
+                  <div class="auth-form-head">
+                    <div>
+                      <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--color-zinc-900)">Admin sign in</h2>
+                      <p class="hint-text" style="margin-top: 0.25rem">Use your canteen credentials.</p>
+                    </div>
+                    <div class="auth-form-logo">AD</div>
+                  </div>
+
+                  <form id="admin-login-form" class="auth-form" novalidate>
+                    <div class="form-field">
+                      <label for="admin-identifier">Email or Phone Number</label>
+                      <input
+                        id="admin-identifier"
+                        name="admin-identifier"
+                        type="text"
+                        autocomplete="username"
+                        class="input-field"
+                        placeholder="e.g. admin"
+                        required
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="admin-password">Password</label>
+                      <input
+                        id="admin-password"
+                        name="admin-password"
+                        type="password"
+                        autocomplete="current-password"
+                        class="input-field"
+                        placeholder="Password"
+                        required
+                      />
+                    </div>
+                    <p id="admin-login-error" class="form-error is-hidden" role="alert"></p>
+                    <div style="padding-top: 0.5rem">
+                      <button type="submit" class="btn-submit-auth">Log in to dashboard</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <p class="auth-footnote" style="margin-top: 1rem">
+                <a href="index.html" class="link-quiet" style="text-decoration: underline">← Back to public site</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer-simple">
+      <div class="footer-simple__inner">
+        <p style="font-size: 11px; margin: 0">&copy; <span id="footer-year"></span> CSMSS Canteen · Admin</p>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById("footer-year").textContent = String(new Date().getFullYear());
+    </script>
+    <script src="admin-login.js" defer></script>
+  </body>
+</html>

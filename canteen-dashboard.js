@@ -1,5 +1,6 @@
 /**
- * CSMSS Canteen — Staff dashboard (Firestore: menuItems + orders).
+ * CSMSS Canteen — Canteen admin dashboard (Firestore: menuItems + orders).
+ * Access is gated by sessionStorage admin session from admin-login.html (not Firebase user role).
  * Load this file BEFORE script.js so window.initCanteenDashboard exists when DOMContentLoaded runs.
  */
 (function () {
@@ -30,21 +31,11 @@
     }
   }
 
-  async function isStaffUser(uid) {
-    if (!uid) return false;
+  const ADMIN_SESSION_KEY = "csmss_canteen_admin_ok";
+
+  function hasAdminSession() {
     try {
-      const svc = await window.__csmssGetFirebaseServices?.();
-      if (!svc?.db) return false;
-      const { doc, getDoc } = await import(
-        "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
-      );
-      const snap = await getDoc(doc(svc.db, "users", uid));
-      if (!snap.exists()) return false;
-      const d = snap.data() || {};
-      const role = String(d.userType || "").toLowerCase();
-      if (role === "staff") return true;
-      if (d.canteenStaff === true) return true;
-      return false;
+      return sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
     } catch {
       return false;
     }
@@ -86,7 +77,7 @@
     root.innerHTML = "";
     if (!orders.length) {
       root.innerHTML =
-        '<p class="staff-empty">No live orders. New customer orders appear here after Razorpay payment.</p>';
+        '<p class="staff-empty">No pending orders. Customer orders appear here after checkout (Razorpay).</p>';
       return;
     }
     orders.forEach((o) => {
@@ -102,20 +93,41 @@
           </li>`
         )
         .join("");
+      const userName = String(o.userName || "—");
+      const userType = String(o.userType || "—");
+      const ident = String(
+        o.userIdentifier || o.userEmail || o.userPhone || o.uid || "—"
+      );
+      const email = String(o.userEmail || "").trim();
+      const phone = String(o.userPhone || "").trim();
+      const pay = String(o.paymentStatus || "—");
+      const st = String(o.status || "Pending");
+      const contactBits = [email && `Email: ${email}`, phone && `Phone: ${phone}`]
+        .filter(Boolean)
+        .join(" · ");
       card.innerHTML = `
         <div class="staff-order-card__head">
           <div>
             <p class="staff-order-card__id">${escapeHtml(o.id)}</p>
             <p class="staff-order-card__meta">${escapeHtml(formatWhen(o.createdAt))}</p>
           </div>
-          <span class="staff-badge staff-badge--placed">${escapeHtml(o.status || "placed")}</span>
+          <span class="staff-badge staff-badge--placed">${escapeHtml(st)}</span>
         </div>
+        <div class="staff-order-card__user">
+          <p class="staff-order-card__userline"><strong>Name:</strong> ${escapeHtml(userName)}</p>
+          <p class="staff-order-card__userline"><strong>Type:</strong> ${escapeHtml(userType)}</p>
+          <p class="staff-order-card__userline"><strong>ID / contact:</strong> ${escapeHtml(ident)}</p>
+          ${contactBits ? `<p class="staff-order-card__userline">${escapeHtml(contactBits)}</p>` : ""}
+          <p class="staff-order-card__userline"><strong>Payment:</strong> ${escapeHtml(pay)}</p>
+        </div>
+        <p class="staff-order-card__items-title">Items</p>
         <ul class="staff-order-card__items">${lines}</ul>
         <div class="staff-order-card__foot">
-          <strong>${formatCurrency(o.totalAmount)}</strong>
-          <button type="button" class="btn btn--primary btn--sm" data-action="complete-order" data-id="${escapeHtml(o.id)}">
-            Mark completed
-          </button>
+          <strong>Total ${formatCurrency(Number(o.totalAmount) || 0)}</strong>
+          <label class="staff-complete-label">
+            <input type="checkbox" data-action="complete-order-cb" data-id="${escapeHtml(o.id)}" />
+            <span>Mark as Completed</span>
+          </label>
         </div>
       `;
       root.appendChild(card);
@@ -141,8 +153,13 @@
     const root = document.getElementById("staff-dashboard-root");
     if (!root) return;
 
+    if (!hasAdminSession()) {
+      window.location.replace("admin-login.html");
+      return;
+    }
+
     const svc = await window.__csmssGetFirebaseServices?.();
-    if (!svc?.auth || !svc.db) {
+    if (!svc?.db) {
       setStaffAccessState(
         false,
         "Firebase is not ready. Open this page from your hosted site."
@@ -150,41 +167,34 @@
       return;
     }
 
-    const { auth, db } = svc;
-    const uid = auth.currentUser?.uid || "";
-    if (!uid) {
-      setStaffAccessState(
-        false,
-        "Please log in with a staff account to use the kitchen dashboard."
-      );
-      if (typeof window.openLoginModal === "function") window.openLoginModal();
-      return;
-    }
-
-    const allowed = await isStaffUser(uid);
-    if (!allowed) {
-      setStaffAccessState(
-        false,
-        "Access denied. Firestore profile must have userType “Staff” or canteenStaff: true."
-      );
-      return;
-    }
-
+    const { db } = svc;
     setStaffAccessState(true, "");
 
-    const { collection, onSnapshot, query, where, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } =
+    const { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } =
       await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
-    // Live orders: status "placed"
+    // Live orders: listen to full collection (client filter) to avoid index issues and include legacy "placed".
     if (unsubOrders) unsubOrders();
-    const ordersQ = query(collection(db, "orders"), where("status", "==", "placed"));
     unsubOrders = onSnapshot(
-      ordersQ,
+      collection(db, "orders"),
       (snap) => {
-        const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        const rows = snap.docs
+          .map((d) => ({ id: d.id, ...(d.data() || {}) }))
+          .filter((o) => {
+            const s = String(o.status || "").toLowerCase();
+            return s === "pending" || s === "placed";
+          });
         rows.sort((a, b) => {
-          const ta = new Date(a.createdAt || 0).getTime();
-          const tb = new Date(b.createdAt || 0).getTime();
+          const ta =
+            (a.createdAt && typeof a.createdAt.toDate === "function"
+              ? a.createdAt.toDate()
+              : new Date(a.createdAt || 0)
+            ).getTime() || 0;
+          const tb =
+            (b.createdAt && typeof b.createdAt.toDate === "function"
+              ? b.createdAt.toDate()
+              : new Date(b.createdAt || 0)
+            ).getTime() || 0;
           return tb - ta;
         });
         setText("staff-stat-live", String(rows.length));
@@ -192,8 +202,10 @@
       },
       (err) => {
         console.error(err);
-        document.getElementById("staff-live-orders").innerHTML =
-          `<p class="staff-empty">Could not load orders (check Firestore rules / composite index). ${escapeHtml(err.message)}</p>`;
+        const live = document.getElementById("staff-live-orders");
+        if (live) {
+          live.innerHTML = `<p class="staff-empty">Could not load orders. ${escapeHtml(err.message)}</p>`;
+        }
       }
     );
 
@@ -261,23 +273,44 @@
     staffClickAbort = new AbortController();
 
     document.body.addEventListener(
-      "click",
+      "change",
       async (e) => {
-      const btn = e.target.closest("[data-action]");
-      if (!btn) return;
-
-      if (btn.matches('[data-action="complete-order"]')) {
-        const id = btn.getAttribute("data-id");
+        const t = e.target;
+        if (!t || !t.matches || !t.matches('input[data-action="complete-order-cb"]')) return;
+        if (!t.checked) return;
+        const id = t.getAttribute("data-id");
         if (!id) return;
+        t.disabled = true;
         try {
           await updateDoc(doc(db, "orders", id), {
-            status: "completed",
+            status: "Completed",
             completedAt: serverTimestamp(),
           });
         } catch (err) {
           console.error(err);
           alert("Could not update order: " + err.message);
+          t.disabled = false;
+          t.checked = false;
         }
+      },
+      { signal: staffClickAbort.signal }
+    );
+
+    document.body.addEventListener(
+      "click",
+      async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+
+      if (btn.matches('[data-action="admin-logout"]')) {
+        try {
+          sessionStorage.removeItem(ADMIN_SESSION_KEY);
+          sessionStorage.removeItem("csmss_canteen_admin_identifier");
+        } catch {
+          // ignore
+        }
+        window.location.href = "admin-login.html";
+        return;
       }
 
       if (btn.matches('[data-action="toggle-menu"]')) {
