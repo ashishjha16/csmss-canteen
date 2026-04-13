@@ -19,9 +19,6 @@
             <span class="nav-brand__tagline">Canteen admin</span>
           </div>
         </a>
-        <div class="nav-links-desktop nav-links-desktop--auth">
-          <a href="index.html">Home</a>
-        </div>
       </nav>
     </header>
 
@@ -30,11 +27,8 @@
         <div class="container">
           <div class="auth-grid">
             <div>
-              <p class="auth-intro-badge">Staff only</p>
+              
               <h1 class="auth-title">Canteen dashboard login</h1>
-              <p class="auth-lead">
-                This login is only for canteen staff. Students and staff ordering food should use the regular site login.
-              </p>
             </div>
 
             <div style="margin: 0 auto; width: 100%; max-width: var(--max-w-lg)">
@@ -57,7 +51,7 @@
                         type="text"
                         autocomplete="username"
                         class="input-field"
-                        placeholder="e.g. admin"
+                        placeholder="username"
                         required
                       />
                     </div>
@@ -88,12 +82,6 @@
         </div>
       </section>
     </main>
-
-    <footer class="footer-simple">
-      <div class="footer-simple__inner">
-        <p style="font-size: 11px; margin: 0">&copy; <span id="footer-year"></span> CSMSS Canteen · Admin</p>
-      </div>
-    </footer>
 
     <script>
       document.getElementById("footer-year").textContent = String(new Date().getFullYear());
