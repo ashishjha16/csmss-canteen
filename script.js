@@ -197,6 +197,74 @@ function readCart() {
 
 function writeCart(items) {
   localStorage.setItem(CART_KEY, JSON.stringify(items));
+  updateCartBadges();
+  syncAddToCartButtons(document);
+}
+
+/** Sync "Add to Cart" / "Add" vs "Go to Cart" labels from localStorage cart. */
+function syncAddToCartButtons(root) {
+  if (!root || !root.querySelectorAll) return;
+  const cart = readCart();
+  const ids = new Set(cart.map((c) => c.id));
+  root.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
+    const id = btn.getAttribute("data-add-to-cart");
+    if (!id) return;
+    const inCart = ids.has(id);
+    if (btn.classList.contains("btn-add-snack")) {
+      btn.textContent = inCart ? "Go to Cart" : "Add";
+    } else {
+      btn.textContent = inCart ? "Go to Cart" : "Add to Cart";
+    }
+    btn.toggleAttribute("data-in-cart", inCart);
+    btn.classList.toggle("btn-add-cart--incart", inCart);
+  });
+}
+
+function getProfileRoleNormalized() {
+  try {
+    const p = JSON.parse(localStorage.getItem(AUTH_PROFILE_KEY) || "{}");
+    const r = String(p.role || "").trim().toLowerCase();
+    if (r === "staff") return "Staff";
+    return "Student";
+  } catch {
+    return "Student";
+  }
+}
+
+function getUserOrderProgressLabel(data) {
+  const st = String(data?.status || "").toLowerCase();
+  if (st === "completed") return "Completed";
+  if (data?.canteenReceived) return "Received";
+  return "Live";
+}
+
+function compareOrderCreatedDesc(a, b) {
+  const ta =
+    (a?.createdAt && typeof a.createdAt.toDate === "function"
+      ? a.createdAt.toDate()
+      : new Date(a?.createdAt || 0)
+    ).getTime() || 0;
+  const tb =
+    (b?.createdAt && typeof b.createdAt.toDate === "function"
+      ? b.createdAt.toDate()
+      : new Date(b?.createdAt || 0)
+    ).getTime() || 0;
+  return tb - ta;
+}
+
+function onGlobalCartButtonClick(e) {
+  const btn = e.target.closest("[data-add-to-cart]");
+  if (!btn) return;
+  const id = btn.getAttribute("data-add-to-cart");
+  if (!id) return;
+  const cart = readCart();
+  if (cart.some((c) => c.id === id)) {
+    e.preventDefault();
+    window.location.href = "cart.html";
+    return;
+  }
+  e.preventDefault();
+  addToCart(id);
 }
 
 function getCartCount(items) {
@@ -398,50 +466,7 @@ const MENU_DATA = {
       name: "Pav Bhaji",
       price: 50,
       description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
-    },    {
-      id: "pav-bhaji",
-      name: "Pav Bhaji",
-      price: 50,
-      description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
-    },    {
-      id: "pav-bhaji",
-      name: "Pav Bhaji",
-      price: 50,
-      description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
-    },    {
-      id: "pav-bhaji",
-      name: "Pav Bhaji",
-      price: 50,
-      description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
-    },    {
-      id: "pav-bhaji",
-      name: "Pav Bhaji",
-      price: 50,
-      description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
-    },    {
-      id: "pav-bhaji",
-      name: "Pav Bhaji",
-      price: 50,
-      description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
-    },    {
-      id: "pav-bhaji",
-      name: "Pav Bhaji",
-      price: 50,
-      description: "Buttery pav served with spicy mashed vegetable curry.",
-      image:
-        "images/pav bhaji.png",
+      image: "images/pav bhaji.png",
     },
     {
       id: "noodles",
@@ -450,6 +475,30 @@ const MENU_DATA = {
       description: "Stir-fried noodles with veggies and Indo-Chinese flavours.",
       image:
         "https://images.pexels.com/photos/884600/pexels-photo-884600.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+      id: "veg-maggi",
+      name: "Veg Masala Maggi",
+      price: 35,
+      description: "Hot instant noodles tossed with vegetables and masala.",
+      image:
+        "https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+      id: "veg-cutlet",
+      name: "Veg Cutlet",
+      price: 30,
+      description: "Crumb-fried mixed vegetable patties with chutney.",
+      image:
+        "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+      id: "cheese-puff",
+      name: "Cheese Puff",
+      price: 28,
+      description: "Flaky baked puff with mild cheese filling.",
+      image:
+        "https://images.pexels.com/photos/410999/pexels-photo-410999.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
   ],
   lunch: [
@@ -484,8 +533,7 @@ const MENU_DATA = {
       name: "Masala Tea",
       price: 10,
       description: "Hot Indian spiced tea.",
-      image:
-        "images/masala tea.avif",
+      image: "images/masala tea.avif",
     },
     {
       id: "coffee",
@@ -499,9 +547,33 @@ const MENU_DATA = {
       id: "juice",
       name: "Fresh Lime Soda",
       price: 25,
-      description: "Refreshing sweet & salty lime soda.",
+      description: "Refreshing sweet and salty lime soda.",
       image:
         "https://images.pexels.com/photos/96974/pexels-photo-96974.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+      id: "buttermilk",
+      name: "Spiced Buttermilk (Chaas)",
+      price: 15,
+      description: "Cool salted buttermilk with roasted cumin.",
+      image:
+        "https://images.pexels.com/photos/5946720/pexels-photo-5946720.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+      id: "mango-lassi",
+      name: "Sweet Mango Lassi",
+      price: 40,
+      description: "Thick yogurt drink blended with mango pulp.",
+      image:
+        "https://images.pexels.com/photos/5947031/pexels-photo-5947031.jpeg?auto=compress&cs=tinysrgb&w=800",
+    },
+    {
+      id: "nimbu-paani",
+      name: "Nimbu Paani",
+      price: 12,
+      description: "Chilled lemonade with mint and light masala.",
+      image:
+        "https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=800",
     },
   ],
 };
@@ -516,41 +588,6 @@ const NON_VEG_ITEMS = [
       "images/chicken roll.png",
   },
   {
-    id: "chicken-burger",
-    name: "Chicken Burger",
-    price: 110,
-    description: "Crispy chicken patty burger with lettuce and mayo.",
-    image:
-      "images/chicken burger.webp",
-  },  {
-    id: "chicken-burger",
-    name: "Chicken Burger",
-    price: 110,
-    description: "Crispy chicken patty burger with lettuce and mayo.",
-    image:
-      "images/chicken burger.webp",
-  },  {
-    id: "chicken-burger",
-    name: "Chicken Burger",
-    price: 110,
-    description: "Crispy chicken patty burger with lettuce and mayo.",
-    image:
-      "images/chicken burger.webp",
-  },  {
-    id: "chicken-burger",
-    name: "Chicken Burger",
-    price: 110,
-    description: "Crispy chicken patty burger with lettuce and mayo.",
-    image:
-      "images/chicken burger.webp",
-  },  {
-    id: "chicken-burger",
-    name: "Chicken Burger",
-    price: 110,
-    description: "Crispy chicken patty burger with lettuce and mayo.",
-    image:
-      "images/chicken burger.webp",
-  },  {
     id: "chicken-burger",
     name: "Chicken Burger",
     price: 110,
@@ -598,6 +635,13 @@ const CATEGORY_NAV = [
     href: "nonveg.html",
     image:
       "https://images.pexels.com/photos/616354/pexels-photo-616354.jpeg?auto=compress&cs=tinysrgb&w=800",
+  },
+  {
+    key: "snacks",
+    title: "Snacks",
+    href: "snacks.html",
+    image:
+      "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     key: "beverages",
@@ -733,7 +777,6 @@ function addToCart(itemId) {
     });
   }
   writeCart(cart);
-  updateCartBadges();
   showMiniToast(`Added "${item.name}" to cart`);
 }
 
@@ -2066,14 +2109,10 @@ function createMenuCard(item) {
   return wrapper;
 }
 
-function bindMenuButtons(root) {
-  root
-    .querySelectorAll("[data-add-to-cart]")
-    .forEach((btn) =>
-      btn.addEventListener("click", () =>
-        addToCart(btn.getAttribute("data-add-to-cart"))
-      )
-    );
+function bindMenuButtons() {
+  if (bindMenuButtons._bound) return;
+  bindMenuButtons._bound = true;
+  document.body.addEventListener("click", onGlobalCartButtonClick);
 }
 
 // Page initializers
@@ -2201,7 +2240,6 @@ function initHomePage() {
   if (categoryRoot) {
     renderCategoryNavCards(categoryRoot);
   }
-  bindMenuButtons(document);
 }
 
 function initMenuPage() {
@@ -2237,7 +2275,6 @@ function initMenuPage() {
   if (categoryRoot) {
     renderCategoryNavCards(categoryRoot);
   }
-  bindMenuButtons(document);
 }
 
 function initCategoryPage(categoryKey) {
@@ -2247,7 +2284,6 @@ function initCategoryPage(categoryKey) {
   getItemsByCategoryKey(categoryKey).forEach((item) => {
     listRoot.appendChild(createMenuCard(item));
   });
-  bindMenuButtons(document);
 }
 
 async function initOrderHistoryPage() {
@@ -2279,30 +2315,35 @@ async function initOrderHistoryPage() {
   emptyRoot.classList.add("is-hidden");
 
   try {
-    const { collection, query, where, orderBy, onSnapshot } = await import(
+    const { collection, query, where, onSnapshot } = await import(
       "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
     );
-    const q = query(
-      collection(db, "orders"),
-      where("uid", "==", uid),
-      orderBy("createdAt", "desc")
-    );
+    const q = query(collection(db, "orders"), where("uid", "==", uid));
 
     orderHistoryUnsub = onSnapshot(
       q,
       (snap) => {
         listRoot.innerHTML = "";
-        const orders = snap.docs.map((d) => {
-          const data = d.data() || {};
-          return {
-            id: d.id,
-            createdAt: data.createdAt || "",
-            items: Array.isArray(data.items) ? data.items : [],
-            totalAmount: Number(data.totalAmount ?? 0) || 0,
-            status: String(data.status || "Pending"),
-            paymentStatus: String(data.paymentStatus || ""),
-          };
-        });
+        const orders = snap.docs
+          .map((d) => {
+            const data = d.data() || {};
+            const ut = String(data.userType || "").toLowerCase();
+            const roleFallback = ut === "staff" ? "Staff" : "Student";
+            return {
+              id: d.id,
+              createdAt: data.createdAt || "",
+              items: Array.isArray(data.items) ? data.items : [],
+              totalAmount: Number(data.totalAmount ?? 0) || 0,
+              status: String(data.status || "Pending"),
+              paymentStatus: String(data.paymentStatus || ""),
+              orderType: String(data.orderType || "—"),
+              accountRole:
+                String(data.accountRole || "").trim() || roleFallback,
+              userName: String(data.userName || "").trim(),
+              canteenReceived: Boolean(data.canteenReceived),
+            };
+          })
+          .sort(compareOrderCreatedDesc);
 
         if (!orders.length) {
           emptyRoot.textContent = "No orders yet.";
@@ -2318,14 +2359,26 @@ async function initOrderHistoryPage() {
             (sum, it) => sum + (Number(it.quantity) || 0),
             0
           );
-          const st = String(order.status || "Pending");
-          const stLower = st.toLowerCase();
+          const progress = getUserOrderProgressLabel(order);
+          const progressLower = progress.toLowerCase();
           const statusColor =
-            stLower === "completed"
+            progressLower === "completed"
               ? "var(--color-emerald-700)"
-              : stLower === "pending" || stLower === "placed"
-                ? "#a16207"
-                : "var(--color-zinc-700)";
+              : progressLower === "received"
+                ? "#2563eb"
+                : "#a16207";
+          const nameLine =
+            order.userName &&
+            `<div class="summary-row summary-row--small" style="margin-top:0.15rem">
+              <span>Name</span>
+              <span style="font-weight:600">${escapeHtml(order.userName)}</span>
+            </div>`;
+          const roleLine =
+            order.accountRole &&
+            `<div class="summary-row summary-row--small" style="margin-top:0.15rem">
+              <span>Category</span>
+              <span style="font-weight:600">${escapeHtml(order.accountRole)}</span>
+            </div>`;
           const payLine =
             order.paymentStatus &&
             `<div class="summary-row summary-row--small" style="margin-top:0.15rem">
@@ -2345,9 +2398,15 @@ async function initOrderHistoryPage() {
             )}</span>
           </div>
           <div class="summary-row summary-row--small" style="margin-top:0.25rem">
-            <span>Status</span>
-            <span style="font-weight:600;color:${statusColor}">${escapeHtml(st)}</span>
+            <span>Order status</span>
+            <span style="font-weight:600;color:${statusColor}">${escapeHtml(progress)}</span>
           </div>
+          <div class="summary-row summary-row--small">
+            <span>Order type</span>
+            <span style="font-weight:600">${escapeHtml(order.orderType)}</span>
+          </div>
+          ${nameLine || ""}
+          ${roleLine || ""}
           ${payLine || ""}
           <div class="summary-row summary-row--small">
             <span>Items (qty)</span>
@@ -2471,6 +2530,7 @@ function renderCartPage() {
     summarySubtotal.textContent = formatCurrency(totals.subtotal);
     summaryTotal.textContent = formatCurrency(totals.total);
     updateCartBadges();
+    syncAddToCartButtons(document);
   }
 
   function updateQuantity(id, delta) {
@@ -2559,10 +2619,35 @@ function renderCartPage() {
     if (nameEl) nameEl.value = profile.fullName || "";
     if (emailEl) emailEl.value = profile.email || "";
     if (phoneEl) phoneEl.value = profile.phone || "";
-    if (roleEl) roleEl.value = profile.role || "";
+    if (roleEl) roleEl.value = "User";
     if (yearEl) yearEl.value = profile.year || "";
     if (branchEl) branchEl.value = profile.branch || "";
     if (rollEl) rollEl.value = profile.rollNumber || profile.roll || "";
+
+    const orderTypeHost = document.getElementById("checkout-order-type-radios");
+    if (orderTypeHost) {
+      const accountRole = getProfileRoleNormalized();
+      const isStaff = accountRole === "Staff";
+      const opts = isStaff
+        ? [
+            { value: "Dine In", id: "ot-dine" },
+            { value: "Take Away", id: "ot-away" },
+            { value: "Delivery", id: "ot-del" },
+          ]
+        : [
+            { value: "Dine In", id: "ot-dine" },
+            { value: "Take Away", id: "ot-away" },
+          ];
+      orderTypeHost.innerHTML = opts
+        .map(
+          (o, i) => `
+        <label class="checkout-order-option">
+          <input type="radio" name="checkoutOrderType" value="${escapeHtml(o.value)}" id="${escapeHtml(o.id)}" ${i === 0 ? "checked" : ""} />
+          <span>${escapeHtml(o.value)}</span>
+        </label>`
+        )
+        .join("");
+    }
 
     if (checkoutItems && checkoutTotal) {
       checkoutItems.innerHTML = "";
@@ -2648,6 +2733,20 @@ function renderCartPage() {
             (Number(i.price) || 0) * (Number(i.quantity) || 0),
         }));
 
+        const accountRole = getProfileRoleNormalized();
+        const orderTypeInput = document.querySelector(
+          'input[name="checkoutOrderType"]:checked'
+        );
+        const orderType = String(orderTypeInput?.value || "").trim();
+        if (!orderType) {
+          showMiniToast("Please select an order type");
+          return;
+        }
+        if (accountRole === "Student" && orderType === "Delivery") {
+          showMiniToast("Delivery is only available for staff accounts");
+          return;
+        }
+
         const persistOrder = async (paymentResponse) => {
           const { addDoc, collection, serverTimestamp } = await import(
             "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
@@ -2664,6 +2763,8 @@ function renderCartPage() {
           const userTypeRaw = String(profile.role || "Student").toLowerCase();
           const userType =
             userTypeRaw === "staff" ? "staff" : "student";
+          const accountRoleLabel =
+            userType === "staff" ? "Staff" : "Student";
           const userPhone = String(profile.phone || "").replace(/\D+/g, "");
           const userEmail = String(
             profile.email || user.email || ""
@@ -2676,13 +2777,17 @@ function renderCartPage() {
             uid: user.uid,
             userName,
             userType,
+            accountRole: accountRoleLabel,
             userIdentifier,
             userEmail,
             userPhone,
             items,
             totalAmount: totals.total,
+            orderType,
             paymentStatus: "Paid",
             status: "Pending",
+            canteenReceived: false,
+            receivedAt: null,
             razorpayPaymentId: String(
               paymentResponse?.razorpay_payment_id || ""
             ),
@@ -2690,7 +2795,6 @@ function renderCartPage() {
             completedAt: null,
           });
           writeCart([]);
-          updateCartBadges();
           closeCheckout();
           refresh();
           showMiniToast("Order placed! Await canteen confirmation.");
@@ -2751,7 +2855,10 @@ function renderCartPage() {
 
 // Keep header badge in sync when cart changes in another tab
 window.addEventListener("storage", (e) => {
-  if (e.key === CART_KEY) updateCartBadges();
+  if (e.key === CART_KEY) {
+    updateCartBadges();
+    syncAddToCartButtons(document);
+  }
   if (e.key === ORDERS_KEY) {
     window.dispatchEvent(new Event(ORDER_HISTORY_UPDATED_EVENT));
   }
@@ -2792,6 +2899,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (page === "nonveg") initCategoryPage("nonveg");
       if (page === "beverages") initCategoryPage("beverages");
       if (page === "breakfast") initCategoryPage("breakfast");
+      if (page === "snacks") initCategoryPage("snacks");
 
       if (page === "order-history") {
         if (user) {
@@ -2815,6 +2923,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (page === "canteen-dashboard" && typeof window.initCanteenDashboard === "function") {
         window.initCanteenDashboard();
       }
+
+      bindMenuButtons();
+      syncAddToCartButtons(document);
 
       uiInitialized = true;
     } else if (page === "order-history" && user) {

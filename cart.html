@@ -147,8 +147,8 @@
                 <input id="checkout-phone" type="text" class="input-readonly" readonly />
               </div>
               <div>
-                <label class="form-label" for="checkout-role">Role</label>
-                <input id="checkout-role" type="text" class="input-readonly" readonly />
+                <label class="form-label" for="checkout-role">User</label>
+                <input id="checkout-role" type="text" class="input-readonly" readonly value="User" />
               </div>
               <div>
                 <label class="form-label" for="checkout-year">Year</label>
@@ -165,6 +165,13 @@
                 <label class="form-label" for="checkout-roll">Roll / Staff ID (optional)</label>
                 <input id="checkout-roll" type="text" class="input-readonly" readonly />
               </div>
+            </div>
+
+            <div class="checkout-order-type-wrap">
+              <fieldset class="checkout-order-fieldset">
+                <legend class="form-label">Order type</legend>
+                <div id="checkout-order-type-radios" class="checkout-order-type-radios" aria-live="polite"></div>
+              </fieldset>
             </div>
 
             <div>

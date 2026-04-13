@@ -94,8 +94,8 @@
           <p class="staff-hero__badge">Canteen operations</p>
           <h1 class="staff-hero__title">Kitchen dashboard</h1>
           <p class="staff-hero__lead">
-            Manage the live menu and mark paid orders as completed. Customers see <strong>Completed</strong> orders in
-            <a href="order-history.html">Order History</a> after you confirm here.
+            Manage the live menu, mark orders as <strong>Received</strong>, then <strong>Complete</strong>. Customers track progress in
+            <a href="order-history.html">Order History</a>.
           </p>
         </div>
       </section>
@@ -105,9 +105,19 @@
         <div class="staff-dashboard-inner">
         <div class="staff-stats">
           <article class="staff-stat-card">
-            <p class="staff-stat-card__label">Live orders</p>
+            <p class="staff-stat-card__label">Today's Orders</p>
+            <p id="staff-stat-today-total" class="staff-stat-card__value">0</p>
+            <p class="staff-stat-card__hint">Orders placed today (local date)</p>
+          </article>
+          <article class="staff-stat-card">
+            <p class="staff-stat-card__label">Orders Received Today</p>
+            <p id="staff-stat-today-received" class="staff-stat-card__value">0</p>
+            <p class="staff-stat-card__hint">Marked Received today (local date)</p>
+          </article>
+          <article class="staff-stat-card">
+            <p class="staff-stat-card__label">Live queue</p>
             <p id="staff-stat-live" class="staff-stat-card__value">0</p>
-            <p class="staff-stat-card__hint">Pending / placed (after Razorpay)</p>
+            <p class="staff-stat-card__hint">Awaiting Received</p>
           </article>
           <article class="staff-stat-card">
             <p class="staff-stat-card__label">Menu items (Firestore)</p>
@@ -185,10 +195,26 @@
 
         <section class="staff-panel staff-panel--wide">
           <div class="staff-panel__head">
-            <h2>Live orders</h2>
-            <p class="hint-text">Real-time updates. Mark completed when food is ready / handed over.</p>
+            <h2>Received Orders</h2>
+            <p class="hint-text">Kitchen has acknowledged these. Mark <strong>Complete</strong> when the order is finished.</p>
+          </div>
+          <div id="staff-received-orders" class="staff-orders-grid"></div>
+        </section>
+
+        <section class="staff-panel staff-panel--wide">
+          <div class="staff-panel__head">
+            <h2>Live Orders</h2>
+            <p class="hint-text">New paid orders. Check <strong>Received</strong> when you start preparing.</p>
           </div>
           <div id="staff-live-orders" class="staff-orders-grid"></div>
+        </section>
+
+        <section class="staff-panel staff-panel--wide">
+          <div class="staff-panel__head">
+            <h2>Order History</h2>
+            <p class="hint-text">Completed orders stay on this page (dashed cards) for your records.</p>
+          </div>
+          <div id="staff-completed-orders" class="staff-orders-grid"></div>
         </section>
         </div>
       </div>
