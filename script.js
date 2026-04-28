@@ -482,7 +482,7 @@ const MENU_DATA = {
       price: 35,
       description: "Hot instant noodles tossed with vegetables and masala.",
       image:
-        "https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://png.pngtree.com/png-vector/20240322/ourmid/pngtree-instant-fried-noodles-png-image_12178744.png",
     },
     {
       id: "veg-cutlet",
@@ -498,7 +498,7 @@ const MENU_DATA = {
       price: 28,
       description: "Flaky baked puff with mild cheese filling.",
       image:
-        "https://images.pexels.com/photos/410999/pexels-photo-410999.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrtTDT0xlWkgOP3uz-wVjg1BQNcsIa-gLjlQ&s",
     },
   ],
   lunch: [
@@ -541,7 +541,7 @@ const MENU_DATA = {
       price: 35,
       description: "Chilled coffee with ice and cream.",
       image:
-        "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://i.pinimg.com/736x/23/4f/a7/234fa76a0626fd615e57e476029d1d72.jpg",
     },
     {
       id: "juice",
@@ -565,7 +565,7 @@ const MENU_DATA = {
       price: 40,
       description: "Thick yogurt drink blended with mango pulp.",
       image:
-        "https://images.pexels.com/photos/5947031/pexels-photo-5947031.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://png.pngtree.com/png-clipart/20250514/original/pngtree-mango-lassi-served-on-wooden-coaster-png-image_20977054.png",
     },
     {
       id: "nimbu-paani",
@@ -573,7 +573,7 @@ const MENU_DATA = {
       price: 12,
       description: "Chilled lemonade with mint and light masala.",
       image:
-        "https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://png.pngtree.com/png-clipart/20240105/original/pngtree-indian-lemonade-bjohpuri-photo-png-image_14017080.png",
     },
   ],
 };
@@ -609,7 +609,7 @@ const NON_VEG_ITEMS = [
     price: 85,
     description: "Grilled chicken sandwich with creamy dressing.",
     image:
-      "images/chicken sandwich.webp",
+      "https://png.pngtree.com/png-vector/20241210/ourmid/pngtree-irresistible-gourmet-chicken-sandwich-with-lettuce-and-onions-png-image_14656599.png",
   },
   {
     id: "bread-omelette",
